@@ -1,0 +1,41 @@
+<div class="card">
+  <h2>Register</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="name">Name</label>
+      <input id="name" type="text" formControlName="name" />
+      <div class="error" *ngIf="form.controls.name.touched && form.controls.name.invalid">
+        Name is required (min 2 characters).
+      </div>
+    </div>
+
+    <div>
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" />
+      <div class="error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+        Enter a valid email.
+      </div>
+    </div>
+
+    <div>
+      <label for="password">Password</label>
+      <input id="password" type="password" formControlName="password" />
+      <div class="error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+        Password must be at least 8 characters.
+      </div>
+    </div>
+
+    <div *ngIf="error" class="error">{{ error }}</div>
+    <div *ngIf="message">{{ message }}</div>
+
+    <button class="btn btn-primary" type="submit" [disabled]="loading">
+      {{ loading ? 'Registering...' : 'Register' }}
+    </button>
+  </form>
+
+  <p>
+    Already have an account?
+    <a routerLink="/auth/login">Login</a>
+  </p>
+</div>
+

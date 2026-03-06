@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: stack-portal-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/stack_portal
+    username: postgres
+    password: root
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 600000       # 10 minutes
+      connection-timeout: 30000  # 30 seconds
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:salmansworkplace@gmail.com}
+    password: ${MAIL_PASSWORD:ykfz oiso sxra xlus}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+jwt:
+  secret: ${JWT_SECRET:y4T8nP2rQ9wL7sF5vB1mZ6xD3kH8jR0uX1a2b3c4d5e6f7g8h9}
+  access-token-expiration-minutes: 30
+  refresh-token-expiration-days: 7
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+
+server:
+  port: 8080
+
+
+
+
+

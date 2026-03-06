@@ -1,0 +1,52 @@
+<div class="card">
+  <h2>{{ isEdit ? 'Edit User' : 'Create User' }}</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="name">Name</label>
+      <input id="name" type="text" formControlName="name" />
+      <div class="error" *ngIf="form.controls.name.touched && form.controls.name.invalid">
+        Name is required.
+      </div>
+    </div>
+
+    <div>
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" />
+      <div class="error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+        Enter a valid email.
+      </div>
+    </div>
+
+    <div *ngIf="!isEdit">
+      <label for="password">Password</label>
+      <input id="password" type="password" formControlName="password" />
+      <div class="error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+        Password is required for new users.
+      </div>
+    </div>
+
+    <div>
+      <label for="active">Active</label>
+      <input id="active" type="checkbox" formControlName="active" />
+    </div>
+
+    <div>
+      <label>Roles</label>
+      <div *ngFor="let role of roles">
+        <input
+          type="checkbox"
+          [value]="role"
+          (change)="onRoleToggle(role, $event.target.checked)"
+        />
+        {{ role }}
+      </div>
+    </div>
+
+    <div *ngIf="error" class="error">{{ error }}</div>
+
+    <button class="btn btn-primary" type="submit" [disabled]="loading">
+      {{ loading ? 'Saving...' : 'Save' }}
+    </button>
+  </form>
+</div>
+

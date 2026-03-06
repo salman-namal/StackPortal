@@ -1,0 +1,35 @@
+<div class="card">
+  <h2>User Management</h2>
+  <a class="btn btn-primary" routerLink="/admin/create">Create User</a>
+
+  <div *ngIf="loading">Loading...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <table *ngIf="!loading && users.length" class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Roles</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of users">
+        <td>{{ user.name }}</td>
+        <td>{{ user.email }}</td>
+        <td>{{ user.active ? 'Active' : 'Inactive' }}</td>
+        <td>{{ user.roles.join(', ') }}</td>
+        <td>
+          <a class="btn btn-secondary" [routerLink]="['/admin/edit', user.id]">Edit</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!loading && !users.length">
+    No users found.
+  </div>
+</div>
+

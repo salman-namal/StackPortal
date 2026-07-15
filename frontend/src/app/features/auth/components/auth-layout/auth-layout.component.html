@@ -1,0 +1,19 @@
+<section class="auth-layout">
+  <div class="auth-layout__visual">
+    <div class="auth-layout__topbar">
+      <a class="brand-pill" routerLink="/auth/login">Stack Portal</a>
+      <app-theme-toggle></app-theme-toggle>
+    </div>
+    <app-auth-branding></app-auth-branding>
+  </div>
+
+  <div class="auth-layout__form">
+    <div class="auth-layout__form-shell">
+      <div class="auth-layout__form-header" *ngIf="title || subtitle">
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
+      </div>
+      <ng-content></ng-content>
+    </div>
+  </div>
+</section>

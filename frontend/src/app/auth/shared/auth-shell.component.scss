@@ -1,0 +1,107 @@
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 60% 40%;
+  background: linear-gradient(135deg, #0b0f19 0%, #111827 60%, #161b22 100%);
+  color: #f8fafc;
+}
+
+.auth-shell__illustration {
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top left, rgba(16, 163, 127, 0.16), transparent 34%);
+}
+
+.auth-shell__illustration img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  object-position: center;
+}
+
+.auth-shell__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2.25rem;
+  position: relative;
+}
+
+.auth-shell__topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.theme-toggle {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #f8fafc;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: transform 220ms ease, background 220ms ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.1);
+}
+
+.auth-shell__content {
+  width: min(100%, 440px);
+  margin: 0 auto;
+  padding: 1.7rem 1.8rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  box-shadow: 0 24px 70px rgba(2,6,23,0.38);
+  backdrop-filter: blur(18px);
+}
+
+.auth-shell__header {
+  margin-bottom: 1.1rem;
+}
+
+.auth-shell__header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.auth-shell__header p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 1023px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-shell__illustration {
+    display: none;
+  }
+
+  .auth-shell__panel {
+    padding: 1.25rem;
+    justify-content: center;
+  }
+
+  .auth-shell__content {
+    width: 100%;
+    max-width: 480px;
+    padding: 1.25rem;
+  }
+}

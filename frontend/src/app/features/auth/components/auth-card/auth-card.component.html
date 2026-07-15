@@ -1,0 +1,7 @@
+<div class="auth-card">
+  <div class="auth-card__header" *ngIf="title || subtitle">
+    <h3>{{ title }}</h3>
+    <p>{{ subtitle }}</p>
+  </div>
+  <ng-content></ng-content>
+</div>

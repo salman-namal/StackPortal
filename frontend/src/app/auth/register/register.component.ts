@@ -1,16 +1,21 @@
 import { Component } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { AuthShellComponent } from '../shared/auth-shell.component';
 
 @Component({
-  selector: 'app-register',
+  selector: 'app-legacy-register',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, AuthShellComponent],
   templateUrl: './register.component.html'
 })
 export class RegisterComponent {
   loading = false;
   message: string | null = null;
   error: string | null = null;
+  showPassword = false;
 
   form = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -23,6 +28,10 @@ export class RegisterComponent {
     private auth: AuthService,
     private router: Router
   ) {}
+
+  togglePassword(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   submit(): void {
     if (this.form.invalid) {

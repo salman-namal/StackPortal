@@ -1,15 +1,15 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { LoginComponent } from './login/login.component';
-import { RegisterComponent } from './register/register.component';
-import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
-import { ResetPasswordComponent } from './reset-password/reset-password.component';
+import { LoginComponent as LegacyLoginComponent } from './login/login.component';
+import { RegisterComponent as LegacyRegisterComponent } from './register/register.component';
+import { ForgotPasswordComponent as LegacyForgotPasswordComponent } from './forgot-password/forgot-password.component';
+import { ResetPasswordComponent as LegacyResetPasswordComponent } from './reset-password/reset-password.component';
 
 const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
-  { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent }
+  { path: 'login', component: LegacyLoginComponent },
+  { path: 'register', component: LegacyRegisterComponent },
+  { path: 'forgot-password', component: LegacyForgotPasswordComponent },
+  { path: 'reset-password', component: LegacyResetPasswordComponent }
 ];
 
 @NgModule({

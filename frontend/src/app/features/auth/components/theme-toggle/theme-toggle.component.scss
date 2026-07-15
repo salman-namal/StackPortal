@@ -1,0 +1,22 @@
+.theme-toggle {
+  border: 1px solid var(--auth-border);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--auth-text);
+  padding: 0.65rem 0.85rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  backdrop-filter: blur(12px);
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+}
+
+.theme-toggle__icon {
+  font-size: 1rem;
+}

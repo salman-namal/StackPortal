@@ -1,25 +1,29 @@
-<div class="card">
-  <h2>Register</h2>
-  <form [formGroup]="form" (ngSubmit)="submit()">
-    <div>
+<app-auth-shell title="Create account" subtitle="Join your AI workspace in a few simple steps.">
+  <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="field-group">
       <label for="name">Name</label>
-      <input id="name" type="text" formControlName="name" />
+      <input id="name" type="text" formControlName="name" placeholder="Alex Morgan" />
       <div class="error" *ngIf="form.controls.name.touched && form.controls.name.invalid">
         Name is required (min 2 characters).
       </div>
     </div>
 
-    <div>
+    <div class="field-group">
       <label for="email">Email</label>
-      <input id="email" type="email" formControlName="email" />
+      <input id="email" type="email" formControlName="email" placeholder="name@company.com" />
       <div class="error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
         Enter a valid email.
       </div>
     </div>
 
-    <div>
+    <div class="field-group password-group">
       <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" />
+      <div class="password-field">
+        <input id="password" [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Create a secure password" />
+        <button type="button" class="password-toggle" (click)="togglePassword()" aria-label="Toggle password visibility">
+          <span [innerHTML]="showPassword ? '🙈' : '👁'" aria-hidden="true"></span>
+        </button>
+      </div>
       <div class="error" *ngIf="form.controls.password.touched && form.controls.password.invalid">
         Password must be at least 8 characters.
       </div>
@@ -29,13 +33,13 @@
     <div *ngIf="message">{{ message }}</div>
 
     <button class="btn btn-primary" type="submit" [disabled]="loading">
-      {{ loading ? 'Registering...' : 'Register' }}
+      {{ loading ? 'Registering...' : 'Create Account' }}
     </button>
-  </form>
 
-  <p>
-    Already have an account?
-    <a routerLink="/auth/login">Login</a>
-  </p>
-</div>
+    <p class="helper-text">
+      Already have an account?
+      <a routerLink="/auth/login">Login</a>
+    </p>
+  </form>
+</app-auth-shell>
 

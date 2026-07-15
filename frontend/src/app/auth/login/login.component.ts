@@ -1,15 +1,20 @@
 import { Component } from '@angular/core';
-import { FormBuilder, Validators } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { AuthShellComponent } from '../shared/auth-shell.component';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-legacy-login',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, AuthShellComponent],
   templateUrl: './login.component.html'
 })
 export class LoginComponent {
   loading = false;
   error: string | null = null;
+  showPassword = false;
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -21,6 +26,10 @@ export class LoginComponent {
     private auth: AuthService,
     private router: Router
   ) { }
+
+  togglePassword(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   submit(): void {
     if (this.form.invalid) {

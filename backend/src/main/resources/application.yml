@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/stack_portal
     username: postgres
-    password: root
+    password: admin123
     driver-class-name: org.postgresql.Driver
 
     hikari:

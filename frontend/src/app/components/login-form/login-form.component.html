@@ -1,0 +1,54 @@
+<section class="login-shell" aria-label="Login area">
+  <div class="login-card">
+    <div class="login-card__content">
+      <div class="login-card__header">
+        <p class="login-card__eyebrow">Secure workspace</p>
+        <h1>Welcome back</h1>
+        <p class="login-card__subtitle">Sign in to continue to your premium AI workspace.</p>
+      </div>
+
+      <form class="login-form" [formGroup]="form" (ngSubmit)="submit()">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" formControlName="email" placeholder="name@company.com" />
+        </label>
+
+        <label class="field">
+          <span>Password</span>
+          <div class="password-field">
+            <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Enter your password" />
+            <button type="button" class="password-toggle" (click)="togglePassword()" aria-label="Toggle password visibility">
+              <span class="password-toggle__icon" [attr.aria-hidden]="true">{{ showPassword ? '🙈' : '👁' }}</span>
+            </button>
+          </div>
+        </label>
+
+        <div class="login-form__meta">
+          <label class="checkbox">
+            <input type="checkbox" formControlName="rememberMe" />
+            <span>Remember me</span>
+          </label>
+          <a routerLink="/auth/forgot-password">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="loading">
+          <span *ngIf="!loading">Sign in</span>
+          <span *ngIf="loading">Signing in…</span>
+        </button>
+      </form>
+
+      <div class="divider" role="separator">
+        <span>or continue with</span>
+      </div>
+
+      <div class="social-grid">
+        <button type="button" class="social-btn" *ngFor="let provider of socialProviders">
+          <span class="social-btn__icon" aria-hidden="true">{{ provider.icon }}</span>
+          <span>{{ provider.name }}</span>
+        </button>
+      </div>
+
+      <p class="signup-link">New here? <a routerLink="/auth/register">Create an account</a></p>
+    </div>
+  </div>
+</section>

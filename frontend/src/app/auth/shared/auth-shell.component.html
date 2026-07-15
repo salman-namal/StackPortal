@@ -1,0 +1,22 @@
+<section class="auth-shell">
+  <div class="auth-shell__illustration" aria-hidden="true">
+    <img src="/assets/images/default-background.png" alt="" />
+  </div>
+
+  <div class="auth-shell__panel">
+    <div class="auth-shell__topbar" *ngIf="showThemeToggle">
+      <button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-pressed]="isDark" aria-label="Toggle dark mode">
+        <span class="theme-toggle__icon" aria-hidden="true">{{ isDark ? '☀︎' : '☾' }}</span>
+        <span>{{ isDark ? 'Light' : 'Dark' }}</span>
+      </button>
+    </div>
+
+    <div class="auth-shell__content">
+      <div class="auth-shell__header" *ngIf="title || subtitle">
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
+      </div>
+      <ng-content></ng-content>
+    </div>
+  </div>
+</section>

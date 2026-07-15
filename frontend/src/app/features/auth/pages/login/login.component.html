@@ -1,0 +1,35 @@
+<app-auth-layout title="Welcome back" subtitle="Sign in to your AI workspace and continue building smarter workflows.">
+  <app-auth-card title="Sign in" subtitle="Use your email and password to continue.">
+    <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="submit()">
+      <label class="field">
+        <span>Email</span>
+        <input type="email" formControlName="email" placeholder="name@company.com" />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <div class="input-group">
+          <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Enter your password" />
+          <button type="button" class="field__toggle" (click)="togglePassword()">{{ showPassword ? 'Hide' : 'Show' }}</button>
+        </div>
+      </label>
+
+      <label class="checkbox-row">
+        <input type="checkbox" formControlName="rememberMe" />
+        <span>Remember me</span>
+      </label>
+
+      <button type="submit" class="btn btn--primary" [disabled]="loading()">
+        <span *ngIf="!loading()">Sign in</span>
+        <span *ngIf="loading()">Signing in…</span>
+      </button>
+
+      <div class="auth-links">
+        <a routerLink="/auth/forgot-password">Forgot password?</a>
+        <a routerLink="/auth/register">Create account</a>
+      </div>
+    </form>
+
+    <app-social-login mode="login"></app-social-login>
+  </app-auth-card>
+</app-auth-layout>

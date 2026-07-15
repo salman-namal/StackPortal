@@ -1,0 +1,45 @@
+<app-auth-layout title="Create your workspace" subtitle="Launch faster with an AI-native foundation for secure collaboration.">
+  <app-auth-card title="Create account" subtitle="Start with a polished, modern setup.">
+    <form class="auth-form" [formGroup]="registerForm" (ngSubmit)="submit()">
+      <label class="field">
+        <span>Full Name</span>
+        <input type="text" formControlName="fullName" placeholder="Alex Morgan" />
+      </label>
+
+      <label class="field">
+        <span>Email</span>
+        <input type="email" formControlName="email" placeholder="alex@company.com" />
+      </label>
+
+      <label class="field">
+        <span>Company Name</span>
+        <input type="text" formControlName="companyName" placeholder="Northstar AI" />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <div class="input-group">
+          <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Create a strong password" />
+          <button type="button" class="field__toggle" (click)="togglePassword()">{{ showPassword ? 'Hide' : 'Show' }}</button>
+        </div>
+      </label>
+
+      <label class="field">
+        <span>Confirm Password</span>
+        <div class="input-group">
+          <input [type]="showConfirmPassword ? 'text' : 'password'" formControlName="confirmPassword" placeholder="Re-enter password" />
+          <button type="button" class="field__toggle" (click)="toggleConfirmPassword()">{{ showConfirmPassword ? 'Hide' : 'Show' }}</button>
+        </div>
+      </label>
+
+      <button type="submit" class="btn btn--primary" [disabled]="loading()">
+        <span *ngIf="!loading()">Create account</span>
+        <span *ngIf="loading()">Creating account…</span>
+      </button>
+
+      <p class="auth-switch">Already have an account? <a routerLink="/auth/login">Log in</a></p>
+    </form>
+
+    <app-social-login mode="signup"></app-social-login>
+  </app-auth-card>
+</app-auth-layout>

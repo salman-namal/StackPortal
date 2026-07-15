@@ -1,0 +1,4 @@
+<button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-pressed]="isDark">
+  <span class="theme-toggle__icon" aria-hidden="true">{{ isDark ? '☀︎' : '☾' }}</span>
+  <span>{{ isDark ? 'Light' : 'Dark' }}</span>
+</button>

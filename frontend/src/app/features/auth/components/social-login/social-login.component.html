@@ -1,0 +1,11 @@
+<div class="social-login">
+  <div class="social-login__divider">
+    <span>{{ mode === 'signup' ? 'Or continue with' : 'Or sign in with' }}</span>
+  </div>
+  <div class="social-login__buttons">
+    <button type="button" class="social-login__button" *ngFor="let provider of providers">
+      <span class="social-login__icon" aria-hidden="true">{{ provider.icon }}</span>
+      <span>{{ provider.name }}</span>
+    </button>
+  </div>
+</div>

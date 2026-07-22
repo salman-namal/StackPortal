@@ -1,44 +1,63 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
-import { AuthCardComponent } from '../../components/auth-card/auth-card.component';
 import { SocialLoginComponent } from '../../components/social-login/social-login.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, AuthLayoutComponent, AuthCardComponent, SocialLoginComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, AuthLayoutComponent, SocialLoginComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent {
-  loginForm: FormGroup;
-  loading = signal(false);
+export class LoginComponent implements OnInit {
+  loginForm!: FormGroup;
   showPassword = false;
+  loading = false;
+  googleLoading = false;
+  submitted = false;
 
-  constructor(private readonly fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private router: Router) {}
+
+  ngOnInit(): void {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required]],
       rememberMe: [true]
     });
   }
 
-  submit(): void {
+  isControlInvalid(controlName: string): boolean {
+    const control = this.loginForm.get(controlName);
+    return !!(control && control.invalid && (control.touched || this.submitted));
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  onSubmit(): void {
+    this.submitted = true;
+
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
     }
 
-    this.loading.set(true);
+    this.loading = true;
     setTimeout(() => {
-      this.loading.set(false);
-    }, 900);
+      this.loading = false;
+      this.router.navigate(['/admin']);
+    }, 1200);
   }
 
-  togglePassword(): void {
-    this.showPassword = !this.showPassword;
+  handleGoogleLogin(): void {
+    this.googleLoading = true;
+    setTimeout(() => {
+      this.googleLoading = false;
+      this.router.navigate(['/admin']);
+    }, 1500);
   }
 }

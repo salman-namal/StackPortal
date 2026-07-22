@@ -1,21 +1,42 @@
-<div class="branding">
-  <div class="branding__logo">
-    <span class="branding__logo-mark">✦</span>
+<div class="auth-branding-panel">
+  <!-- Tech Grid Background Pattern -->
+  <div class="grid-overlay"></div>
+
+  <!-- Ambient Glowing Light Orbs & Waves -->
+  <div class="glow-orb orb-top"></div>
+  <div class="glow-orb orb-bottom"></div>
+
+  <!-- Abstract Waves SVG -->
+  <div class="abstract-waves">
+    <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M-100 450 C 200 350, 400 550, 900 380" stroke="url(#wave-grad-1)" stroke-width="2.5" opacity="0.65" />
+      <path d="M-100 480 C 250 380, 450 580, 900 410" stroke="url(#wave-grad-2)" stroke-width="1.5" opacity="0.4" />
+      <path d="M-100 520 C 300 410, 500 620, 900 450" stroke="url(#wave-grad-1)" stroke-width="1" opacity="0.25" />
+      <defs>
+        <linearGradient id="wave-grad-1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#2563eb" stop-opacity="0.1" />
+          <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.8" />
+          <stop offset="100%" stop-color="#60a5fa" stop-opacity="0.2" />
+        </linearGradient>
+        <linearGradient id="wave-grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#1d4ed8" stop-opacity="0.1" />
+          <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.9" />
+          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.2" />
+        </linearGradient>
+      </defs>
+    </svg>
   </div>
-  <div class="branding__copy">
-    <h2>Stack Portal</h2>
-    <p>AI-native operations for modern teams.</p>
-  </div>
-  <div class="branding__illustration" aria-hidden="true">
-    <div class="blob blob--one"></div>
-    <div class="blob blob--two"></div>
-    <div class="illustration-card">
-      <div class="illustration-card__header"></div>
-      <div class="illustration-card__body">
-        <div class="dot"></div>
-        <div class="dot"></div>
-        <div class="dot"></div>
-      </div>
+
+  <!-- Central Brand Identity -->
+  <div class="brand-content">
+    <div class="logo-wrapper">
+      <div class="logo-glow"></div>
+      <img src="assets/images/Logo.png" alt="Stack Logo" class="brand-logo" />
+    </div>
+
+    <div class="brand-text">
+      <h2 class="brand-title">Welcome to Stack</h2>
+      <p class="brand-tagline">Build. Manage. Scale.</p>
     </div>
   </div>
 </div>

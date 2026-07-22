@@ -1,101 +1,185 @@
-.branding {
-  display: grid;
-  gap: 1.25rem;
-  align-content: start;
-  max-width: 500px;
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.branding__logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--auth-primary), var(--auth-secondary));
-  color: white;
-  font-size: 1.4rem;
-  box-shadow: 0 20px 45px rgba(37, 99, 235, 0.2);
-}
-
-.branding__copy h2 {
-  margin: 0 0 0.35rem;
-  font-size: clamp(1.7rem, 2.2vw, 2.4rem);
-}
-
-.branding__copy p {
-  margin: 0;
-  color: var(--auth-muted);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.branding__illustration {
+.auth-branding-panel {
   position: relative;
-  min-height: 260px;
-  border-radius: 28px;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.38);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--auth-border);
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #070c18 0%, #0c1427 50%, #040814 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  user-select: none;
 }
 
-.blob {
+/* Tech Dot Grid Matrix Overlay */
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  opacity: 0.45;
+  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0) 90%);
+}
+
+/* Glowing Ambient Orbs */
+.glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(2px);
-  opacity: 0.9;
-}
+  filter: blur(80px);
+  pointer-events: none;
 
-.blob--one {
-  width: 180px;
-  height: 180px;
-  top: -40px;
-  right: -20px;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.35), transparent 70%);
-}
+  &.orb-top {
+    width: 28rem;
+    height: 28rem;
+    top: -10%;
+    right: -10%;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.35) 0%, rgba(37, 99, 235, 0) 70%);
+  }
 
-.blob--two {
-  width: 220px;
-  height: 220px;
-  bottom: -70px;
-  left: -40px;
-  background: radial-gradient(circle, rgba(129, 140, 248, 0.28), transparent 70%);
-}
-
-.illustration-card {
-  position: relative;
-  z-index: 1;
-  margin-top: 2rem;
-  padding: 1.25rem;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-.illustration-card__header {
-  height: 12px;
-  width: 72%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--auth-primary), var(--auth-secondary));
-  margin-bottom: 1rem;
-}
-
-.illustration-card__body {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(129, 140, 248, 0.95));
-}
-
-@media (max-width: 767px) {
-  .branding__illustration {
-    min-height: 220px;
+  &.orb-bottom {
+    width: 32rem;
+    height: 32rem;
+    bottom: -12%;
+    left: -12%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(14, 165, 233, 0) 70%);
   }
 }
+
+/* Abstract Waves SVG */
+.abstract-waves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* Brand Identity Content */
+.brand-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2.5rem;
+}
+
+.logo-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.8rem; /* Tighter spacing to welcome heading */
+
+  .logo-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16.5rem;
+    height: 16.5rem;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.65) 0%, rgba(59, 130, 246, 0.22) 50%, transparent 75%);
+    filter: blur(35px);
+    border-radius: 50%;
+    animation: pulse-glow 4s ease-in-out infinite alternate;
+  }
+
+  .brand-logo {
+    position: relative;
+    z-index: 2;
+    width: 15.5rem; /* Increased logo size by ~30% */
+    max-width: 80vw;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 30px rgba(37, 99, 235, 0.6));
+    transition: transform 300ms ease;
+
+    &:hover {
+      transform: scale(1.03);
+    }
+  }
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  .brand-title {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .brand-tagline {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #cbd5e1; /* Enhanced readability contrast */
+    letter-spacing: 0.06em;
+    margin: 0;
+    line-height: 1.4;
+  }
+}
+
+@keyframes pulse-glow {
+  0% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@media (max-width: 1023px) {
+  .auth-branding-panel {
+    min-height: auto;
+    padding: 3rem 1.5rem;
+  }
+
+  .logo-wrapper {
+    margin-bottom: 1.35rem;
+
+    .brand-logo {
+      width: 11rem;
+    }
+
+    .logo-glow {
+      width: 12rem;
+      height: 12rem;
+    }
+  }
+
+  .brand-text {
+    .brand-title {
+      font-size: 1.8rem;
+    }
+
+    .brand-tagline {
+      font-size: 1rem;
+    }
+  }
+}
+

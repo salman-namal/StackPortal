@@ -1,0 +1,70 @@
+.otp-component {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.otp-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.otp-box {
+  flex: 1;
+  height: 3.5rem;
+  max-width: 3.5rem;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--auth-heading);
+  background-color: var(--auth-input-bg);
+  border: 1px solid var(--auth-border);
+  border-radius: 12px;
+  outline: none;
+  transition: all 200ms ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+
+  &:hover {
+    border-color: var(--auth-muted);
+  }
+
+  &:focus {
+    border-color: var(--auth-primary);
+    box-shadow: 0 0 0 4px var(--auth-ring);
+    transform: translateY(-2px);
+  }
+}
+
+.otp-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--auth-muted);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.timer-badge {
+  font-weight: 600;
+  color: var(--auth-primary);
+  background-color: rgba(37, 99, 235, 0.1);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+}
+
+.resend-btn {
+  background: transparent;
+  border: none;
+  color: var(--auth-primary);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

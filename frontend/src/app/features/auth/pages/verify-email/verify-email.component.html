@@ -1,0 +1,20 @@
+<app-auth-layout title="Verify your email" [subtitle]="'Enter the 6-digit code sent to ' + userEmail">
+  <div class="auth-form">
+    <app-otp-input (otpSubmit)="handleOtpSubmit($event)" (resendOtp)="handleResendOtp()"></app-otp-input>
+
+    <!-- Verify Button -->
+    <button type="button" class="btn-primary" [disabled]="loading" (click)="verifyCode()">
+      <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      <span>{{ loading ? 'Verifying code...' : 'Verify code' }}</span>
+      <svg *ngIf="!loading" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+        <polyline points="12 5 19 12 12 19"></polyline>
+      </svg>
+    </button>
+
+    <div class="verify-footer-links">
+      <a routerLink="/auth/register" class="auth-link">Change email</a>
+      <a routerLink="/auth/login" class="auth-link">Back to sign in</a>
+    </div>
+  </div>
+</app-auth-layout>

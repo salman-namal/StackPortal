@@ -1,0 +1,55 @@
+<app-auth-layout title="Authentication States" subtitle="Preview all interactive UI state variations.">
+  <div class="states-showcase">
+    <!-- State Selector Buttons -->
+    <div class="state-tabs">
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'loading'" (click)="activeTab = 'loading'">Loading</button>
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'empty'" (click)="activeTab = 'empty'">Empty</button>
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'success'" (click)="activeTab = 'success'">Success</button>
+      <button type="button" class="tab-btn" [class.active]="activeTab === 'error'" (click)="activeTab = 'error'">Error</button>
+    </div>
+
+    <!-- State Card Display -->
+    <div class="state-content">
+      <!-- Loading State -->
+      <div *ngIf="activeTab === 'loading'" class="state-card">
+        <div class="spinner-border text-primary mb-3" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
+        <h4>Authenticating Credentials...</h4>
+        <p>Connecting securely to Stack Portal servers.</p>
+        <button class="btn-primary" disabled>
+          <span class="spinner-border spinner-border-sm"></span>
+          Processing request...
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="activeTab === 'empty'" class="state-card">
+        <div class="status-badge-icon info mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        </div>
+        <h4>No Active Session Found</h4>
+        <p>You have not logged in yet. Please sign in to view your dashboard.</p>
+        <button class="btn-primary" routerLink="/auth/login">Sign In</button>
+      </div>
+
+      <!-- Success State -->
+      <div *ngIf="activeTab === 'success'" class="state-card">
+        <div class="status-badge-icon success mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h4>Authentication Successful</h4>
+        <p>Redirecting to your Stack workspace dashboard.</p>
+        <button class="btn-primary" routerLink="/admin">Open Dashboard</button>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="activeTab === 'error'" class="state-card">
+        <div class="status-badge-icon error mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h4>Invalid Credentials</h4>
+        <p>The email or password you entered is incorrect. Please try again.</p>
+        <button class="btn-primary" routerLink="/auth/login">Try Again</button>
+      </div>
+    </div>
+  </div>
+</app-auth-layout>

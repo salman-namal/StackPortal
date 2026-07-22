@@ -1,0 +1,28 @@
+<app-auth-layout title="Resend verification" subtitle="Enter your email to receive a new email verification link.">
+  <form class="auth-form" [formGroup]="resendForm" (ngSubmit)="onSubmit()" novalidate>
+    <div class="form-group">
+      <label for="resend-email">Email address</label>
+      <div class="input-container">
+        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <input id="resend-email" type="email" formControlName="email" placeholder="you@company.com" [class.is-invalid]="isControlInvalid('email')" />
+      </div>
+      <div class="form-error" *ngIf="isControlInvalid('email')">
+        <span *ngIf="resendForm.get('email')?.errors?.['required']">Email address is required</span>
+        <span *ngIf="resendForm.get('email')?.errors?.['email']">Please enter a valid email address</span>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary" [disabled]="loading">
+      <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      <span>{{ loading ? 'Sending link...' : 'Resend verification link' }}</span>
+      <svg *ngIf="!loading" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+        <polyline points="12 5 19 12 12 19"></polyline>
+      </svg>
+    </button>
+  </form>
+
+  <p class="auth-bottom-text">
+    Back to <a routerLink="/auth/login" class="auth-link">sign in</a>
+  </p>
+</app-auth-layout>

@@ -1,0 +1,62 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.states-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.state-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background-color: var(--auth-secondary);
+  padding: 0.35rem;
+  border-radius: 12px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--auth-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &.active {
+    background-color: var(--auth-surface);
+    color: var(--auth-heading);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  background-color: var(--auth-card);
+  border: 1px solid var(--auth-border);
+  border-radius: 16px;
+
+  h4 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--auth-heading);
+    margin: 0 0 0.5rem 0;
+  }
+
+  p {
+    font-size: 0.875rem;
+    color: var(--auth-muted);
+    margin: 0 0 1.5rem 0;
+  }
+}

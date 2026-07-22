@@ -1,19 +1,33 @@
-<section class="auth-layout">
-  <div class="auth-layout__visual">
-    <div class="auth-layout__topbar">
-      <a class="brand-pill" routerLink="/auth/login">Stack Portal</a>
-      <app-theme-toggle></app-theme-toggle>
-    </div>
-    <app-auth-branding></app-auth-branding>
-  </div>
-
-  <div class="auth-layout__form">
-    <div class="auth-layout__form-shell">
-      <div class="auth-layout__form-header" *ngIf="title || subtitle">
-        <h1>{{ title }}</h1>
-        <p>{{ subtitle }}</p>
+<div class="auth-layout">
+  <!-- Left Side: Authentication Form Section -->
+  <div class="auth-layout__form-panel">
+    <!-- Top Action Bar with Stack Logo (Top-Left) and Theme Toggle (Top-Right) -->
+    <div class="auth-layout__top-bar">
+      <!-- Stack Logo & Brand Name in Top-Left of Auth Form -->
+      <div class="auth-top-logo">
+        <img src="assets/images/Logo.png" alt="Stack Logo" class="auth-logo-img" />
+        <span class="auth-logo-title">Stack</span>
       </div>
+
+      <!-- Theme Toggle in Top-Right of Auth Form -->
+      <div class="auth-top-toggle">
+        <app-theme-toggle></app-theme-toggle>
+      </div>
+    </div>
+
+    <!-- Main Content Shell -->
+    <div class="auth-layout__shell">
+      <div class="auth-layout__header" *ngIf="title || subtitle">
+        <h1 class="auth-title">{{ title }}</h1>
+        <p class="auth-subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+      </div>
+
       <ng-content></ng-content>
     </div>
   </div>
-</section>
+
+  <!-- Right Side: Full Height Branding Panel -->
+  <div class="auth-layout__branding-panel">
+    <app-auth-branding></app-auth-branding>
+  </div>
+</div>

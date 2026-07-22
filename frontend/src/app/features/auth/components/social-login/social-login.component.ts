@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -9,11 +9,13 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./social-login.component.scss']
 })
 export class SocialLoginComponent {
-  @Input() mode: 'login' | 'signup' = 'login';
+  @Input() label = 'Continue with Google';
+  @Input() loading = false;
+  @Output() googleClick = new EventEmitter<void>();
 
-  readonly providers = [
-    { name: 'Google', icon: 'G' },
-    { name: 'GitHub', icon: '◉' },
-    { name: 'Microsoft', icon: '▣' }
-  ];
+  onGoogleLogin(): void {
+    if (!this.loading) {
+      this.googleClick.emit();
+    }
+  }
 }

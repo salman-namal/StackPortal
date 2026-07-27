@@ -37,9 +37,14 @@ public class AuthController {
         return ResponseEntity.ok(authService.logout(refreshToken));
     }
 
-    @GetMapping("/verify-email")
-    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam("token") String token) {
-        return ResponseEntity.ok(authService.verifyEmail(token));
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return ResponseEntity.ok(authService.verifyEmail(request.getToken()));
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<Void>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        return ResponseEntity.ok(authService.resendVerification(request));
     }
 
     @PostMapping("/forgot-password")

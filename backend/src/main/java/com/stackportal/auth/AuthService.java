@@ -15,6 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -51,25 +52,24 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .active(true)
+                .active(false)
                 .emailVerified(false)
                 .roles(new HashSet<>(Collections.singletonList(userRole)))
                 .build();
         userRepository.save(user);
 
-        String tokenValue = UUID.randomUUID().toString();
+        String otpCode = generateOtp();
         EmailVerificationToken token = EmailVerificationToken.builder()
-                .token(tokenValue)
+                .token(otpCode)
                 .user(user)
-                .expiresAt(Instant.now().plus(24, ChronoUnit.HOURS))
+                .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
                 .used(false)
                 .build();
         emailVerificationTokenRepository.save(token);
 
-        String verificationLink = appBaseUrl + "/verify-email?token=" + tokenValue;
-        emailService.sendEmailVerification(user.getEmail(), verificationLink);
+        emailService.sendEmailVerification(request.getEmail(), otpCode);
 
-        return ApiResponse.ok("Registration successful. Please check your email to verify your account.", null);
+        return ApiResponse.ok("Registration successful. Please check your email for the verification code.", null);
     }
 
     public ApiResponse<AuthResponse> login(LoginRequest request) {
@@ -111,10 +111,10 @@ public class AuthService {
     @Transactional
     public ApiResponse<Void> verifyEmail(String tokenValue) {
         EmailVerificationToken token = emailVerificationTokenRepository.findByToken(tokenValue)
-                .orElseThrow(() -> new ApiException("Invalid verification token", HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new ApiException("Invalid verification code", HttpStatus.BAD_REQUEST));
 
         if (token.isUsed() || token.getExpiresAt().isBefore(Instant.now())) {
-            throw new ApiException("Verification token expired or already used", HttpStatus.BAD_REQUEST);
+            throw new ApiException("Verification code expired or already used", HttpStatus.BAD_REQUEST);
         }
 
         User user = token.getUser();
@@ -122,10 +122,34 @@ public class AuthService {
         user.setActive(true);
         userRepository.save(user);
 
-        token.setUsed(true);
-        emailVerificationTokenRepository.save(token);
+        emailVerificationTokenRepository.delete(token);
 
         return ApiResponse.ok("Email verified successfully", null);
+    }
+
+    @Transactional
+    public ApiResponse<Void> resendVerification(ResendVerificationRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
+
+        if (user.isEmailVerified()) {
+            throw new ApiException("Email is already verified", HttpStatus.BAD_REQUEST);
+        }
+
+        emailVerificationTokenRepository.deleteByUser(user);
+
+        String otpCode = generateOtp();
+        EmailVerificationToken token = EmailVerificationToken.builder()
+                .token(otpCode)
+                .user(user)
+                .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
+                .used(false)
+                .build();
+        emailVerificationTokenRepository.save(token);
+
+        emailService.sendEmailVerification(user.getEmail(), otpCode);
+
+        return ApiResponse.ok("A new verification code has been sent to your email.", null);
     }
 
     @Transactional
@@ -227,6 +251,15 @@ public class AuthService {
                 .build();
 
         return ApiResponse.ok("Authentication successful", authResponse);
+    }
+
+    private String generateOtp() {
+        String otp;
+        SecureRandom random = new SecureRandom();
+        do {
+            otp = String.format("%06d", random.nextInt(1000000));
+        } while (emailVerificationTokenRepository.existsByToken(otp));
+        return otp;
     }
 }
 

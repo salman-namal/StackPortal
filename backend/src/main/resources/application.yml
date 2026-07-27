@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/stack_portal
     username: postgres
-    password: admin123
+    password: admin
     driver-class-name: org.postgresql.Driver
 
     hikari:
@@ -30,8 +30,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME:salmansworkplace@gmail.com}
-    password: ${MAIL_PASSWORD:ykfz oiso sxra xlus}
+    username: salmansworkplace@gmail.com
+    password: gwdm yrrj wjjm bgzm
     properties:
       mail:
         smtp:

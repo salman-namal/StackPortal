@@ -15,12 +15,12 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String from;
 
-    public void sendEmailVerification(String to, String verificationLink) {
+    public void sendEmailVerification(String to, String otpCode) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
         message.setFrom(from);
         message.setSubject("Verify your Stack Portal account");
-        message.setText("Please click the link below to verify your email:\n" + verificationLink);
+        message.setText("Your email verification code is: " + otpCode + "\n\nThis code will expire in 15 minutes.");
         mailSender.send(message);
     }
 

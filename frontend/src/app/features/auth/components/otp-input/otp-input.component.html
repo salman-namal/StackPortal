@@ -1,19 +1,8 @@
 <div class="otp-component">
   <div class="otp-grid" (paste)="onPaste($event)">
-    <input
-      *ngFor="let digit of digits; let i = index"
-      #otpInput
-      type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      maxLength="1"
-      class="otp-box"
-      [value]="digit"
-      (input)="onInput($event, i)"
-      (keydown)="onKeyDown($event, i)"
-      [attr.aria-label]="'Digit ' + (i + 1) + ' of 6'"
-      autocomplete="off"
-    />
+    <input *ngFor="let digit of digits; let i = index" #otpInput type="text" inputmode="numeric"
+      autocomplete="one-time-code" maxlength="1" class="otp-box" [value]="digits[i]" (input)="onInput($event, i)"
+      (keydown)="onKeyDown($event, i)" [attr.aria-label]="'Digit ' + (i + 1)" />
   </div>
 
   <div class="otp-resend-row">

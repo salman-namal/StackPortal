@@ -16,15 +16,17 @@ export class OtpInputComponent implements OnInit, OnDestroy {
 
   @ViewChildren('otpInput') inputs!: QueryList<ElementRef<HTMLInputElement>>;
 
-  digits: string[] = Array(6).fill('');
+  digits: string[] = [];
   countdown = 45;
   timerInterval: any = null;
   canResend = false;
 
-  ngOnInit(): void {
-    this.countdown = this.initialCountdown;
-    this.startTimer();
-  }
+ ngOnInit(): void {
+  this.digits = Array(this.length).fill('');
+  this.countdown = this.initialCountdown;
+  this.startTimer();
+  console.log("OTP COMPONENT LOADED");
+}
 
   ngOnDestroy(): void {
     this.stopTimer();
@@ -52,29 +54,43 @@ export class OtpInputComponent implements OnInit, OnDestroy {
     }
   }
 
-  onInput(event: Event, index: number): void {
-    const input = event.target as HTMLInputElement;
-    const value = input.value;
+ onInput(event: Event, index: number): void {
+  const input = event.target as HTMLInputElement;
 
-    // Only allow single digit numeric input
-    if (!/^\d$/.test(value)) {
-      this.digits[index] = '';
-      input.value = '';
-      return;
-    }
+  // Keep only numeric characters
+  const value = input.value.replace(/\D/g, '');
 
-    this.digits[index] = value;
+  // Handle browser autofill or paste into a single box
+  if (value.length > 1) {
+    const chars = value.substring(0, this.length - index).split('');
 
-    // Auto advance focus to next input
-    if (index < this.length - 1) {
-      const nextInput = this.inputs.toArray()[index + 1];
-      if (nextInput) {
-        nextInput.nativeElement.focus();
+    chars.forEach((char, i) => {
+      this.digits[index + i] = char;
+
+      const el = this.inputs.toArray()[index + i];
+      if (el) {
+        el.nativeElement.value = char;
       }
-    }
+    });
+
+    const nextIndex = Math.min(index + chars.length, this.length - 1);
+    this.inputs.toArray()[nextIndex]?.nativeElement.focus();
 
     this.checkCompletion();
+    return;
   }
+
+  // Normal typing
+  const digit = value.slice(-1);
+  input.value = digit;
+  this.digits[index] = digit;
+
+  if (digit && index < this.length - 1) {
+    this.inputs.toArray()[index + 1]?.nativeElement.focus();
+  }
+
+  this.checkCompletion();
+}
 
   onKeyDown(event: KeyboardEvent, index: number): void {
     // Handle backspace navigation
@@ -82,10 +98,13 @@ export class OtpInputComponent implements OnInit, OnDestroy {
       if (!this.digits[index] && index > 0) {
         const prevInput = this.inputs.toArray()[index - 1];
         if (prevInput) {
+          prevInput.nativeElement.value = '';
           prevInput.nativeElement.focus();
           this.digits[index - 1] = '';
         }
       } else {
+        const input = event.target as HTMLInputElement;
+        input.value = '';
         this.digits[index] = '';
       }
     }

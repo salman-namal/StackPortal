@@ -1,5 +1,8 @@
 <app-auth-layout title="Create account" subtitle="Join Stack and get started today.">
   <form class="auth-form" [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+    <div class="form-error main-error" *ngIf="errorMessage" style="margin-bottom: 1rem; color: #dc3545; padding: 0.75rem; background: #f8d7da; border-radius: 0.375rem; border: 1px solid #f5c2c7;">
+      {{ errorMessage }}
+    </div>
     <!-- First Name & Last Name Grid -->
     <div class="grid-two">
       <div class="form-group">

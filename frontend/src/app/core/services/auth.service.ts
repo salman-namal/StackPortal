@@ -45,6 +45,15 @@ export class AuthService {
     });
   }
 
+  verifyEmail(token: string): Observable<ApiResponse<void>> {
+    console.log("3. Calling verifyEmail API with token:", token);
+    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/verify-email`, { token });
+  }
+
+  resendVerification(email: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/resend-verification`, { email });
+  }
+
   forgotPassword(email: string): Observable<ApiResponse<void>> {
     return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/forgot-password`, { email });
   }

@@ -4,6 +4,7 @@ import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validatio
 import { Router, RouterModule } from '@angular/router';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
 import { SocialLoginComponent } from '../../components/social-login/social-login.component';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -19,11 +20,16 @@ export class RegisterComponent implements OnInit {
   loading = false;
   googleLoading = false;
   submitted = false;
+  errorMessage: string | null = null;
 
   strengthScore = 0;
   strengthLabel = 'Weak';
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.registerForm = this.fb.group(
@@ -76,6 +82,7 @@ export class RegisterComponent implements OnInit {
 
   onSubmit(): void {
     this.submitted = true;
+    this.errorMessage = null;
 
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
@@ -83,10 +90,23 @@ export class RegisterComponent implements OnInit {
     }
 
     this.loading = true;
-    setTimeout(() => {
-      this.loading = false;
-      this.router.navigate(['/auth/verify-email']);
-    }, 1200);
+    const { firstName, lastName, email, password } = this.registerForm.value;
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    this.authService.register(fullName, email, password).subscribe({
+      next: (res) => {
+        this.loading = false;
+        if (res.success) {
+          this.router.navigate(['/auth/verify-email'], { state: { email: email } });
+        } else {
+          this.errorMessage = res.message || 'Registration failed. Please try again.';
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.errorMessage = err.error?.message || 'An error occurred during registration.';
+      }
+    });
   }
 
   handleGoogleLogin(): void {

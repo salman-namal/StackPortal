@@ -25,6 +25,7 @@ const OTP_LENGTH = 6;
 })
 export class OtpInputComponent implements OnInit, OnDestroy {
   @Input() initialCountdown = 45;
+  @Input() disabled = false;
   @Output() otpSubmit = new EventEmitter<string>();
   @Output() resendOtp = new EventEmitter<void>();
 
@@ -89,7 +90,7 @@ export class OtpInputComponent implements OnInit, OnDestroy {
   }
 
   handleResend(): void {
-    if (!this.canResend) {
+    if (this.disabled || !this.canResend) {
       return;
     }
 

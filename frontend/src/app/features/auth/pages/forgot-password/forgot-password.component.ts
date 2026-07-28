@@ -2,10 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
 import { ApiResponse, AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -17,13 +18,14 @@ import { ApiResponse, AuthService } from '../../../../core/services/auth.service
 export class ForgotPasswordComponent implements OnInit {
   forgotForm!: FormGroup;
   loading = false;
+  redirecting = false;
   submitted = false;
-  errorMessage: string | null = null;
-  successMessage: string | null = null;
 
   constructor(
     private readonly fb: FormBuilder,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly toastService: ToastService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
@@ -38,10 +40,11 @@ export class ForgotPasswordComponent implements OnInit {
   }
 
   onSubmit(): void {
-    this.submitted = true;
-    this.errorMessage = null;
-    this.successMessage = null;
+    if (this.loading || this.redirecting) {
+      return;
+    }
 
+    this.submitted = true;
     if (this.forgotForm.invalid) {
       this.forgotForm.markAllAsTouched();
       return;
@@ -53,8 +56,17 @@ export class ForgotPasswordComponent implements OnInit {
     this.authService.forgotPassword(email)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: () => this.successMessage = 'Check your email for a password reset link.',
-        error: (error: HttpErrorResponse) => this.errorMessage = this.getBackendErrorMessage(error)
+        next: (response) => {
+          if (response.success) {
+            this.toastService.success('Password reset link has been sent to your email.');
+            this.redirecting = true;
+            window.setTimeout(() => void this.router.navigate(['/auth/login']), 1500);
+            return;
+          }
+
+          this.toastService.error(response.message || 'Unable to send a password reset link. Please try again.');
+        },
+        error: (error: HttpErrorResponse) => this.toastService.error(this.getBackendErrorMessage(error))
       });
   }
 

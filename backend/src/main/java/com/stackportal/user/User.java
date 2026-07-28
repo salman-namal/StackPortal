@@ -31,6 +31,9 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    @Column(nullable = false, unique = true, length = 150)
+    private String username;
+
     @Column(nullable = false)
     private String password;
 
@@ -56,6 +59,9 @@ public class User implements UserDetails {
 
     @PrePersist
     public void prePersist() {
+        if (username == null || username.isBlank()) {
+            username = email;
+        }
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }

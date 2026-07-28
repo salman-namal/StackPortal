@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
 import { OtpInputComponent } from '../../components/otp-input/otp-input.component';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-verify-email',
@@ -18,10 +19,8 @@ export class VerifyEmailComponent implements OnInit {
   userEmail = 'you@company.com';
   otpCode = '';
   loading = false;
-  errorMessage: string | null = null;
-  successMessage: string | null = null;
 
-  constructor(private router: Router, private authService: AuthService) {
+  constructor(private router: Router, private authService: AuthService, private toastService: ToastService) {
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras.state && navigation.extras.state['email']) {
       this.userEmail = navigation.extras.state['email'];
@@ -40,56 +39,59 @@ export class VerifyEmailComponent implements OnInit {
   }
 
  verifyCode(): void {
-  console.log("1. Verify button clicked");
-
-  console.log("2. OTP Component:", this.otpInputComponent);
+  if (this.loading) {
+    return;
+  }
 
   if (this.otpInputComponent) {
     this.otpCode = this.otpInputComponent.digits.join('');
   }
 
-  console.log("Digits Array:", this.otpInputComponent.digits);
-  console.log("Digits Length:", this.otpInputComponent.digits.length);
-  console.log("Joined OTP:", this.otpInputComponent.digits.join(""));
-
   if (!this.otpCode || this.otpCode.length !== 6) {
-    console.log("4. Validation failed");
-    this.errorMessage = 'Please enter a valid 6-digit code';
+    this.toastService.error('Please enter a valid 6-digit code.');
     return;
   }
-
-  console.log("5. Calling verifyEmail API");
 
   this.loading = true;
 
   this.authService.verifyEmail(this.otpCode).subscribe({
     next: (res) => {
-      console.log("6. API Success", res);
       this.loading = false;
+      if (!res.success) {
+        this.toastService.error(res.message || 'Unable to verify your email.');
+        return;
+      }
+
+      this.toastService.success('Email verified successfully.');
+      window.setTimeout(() => void this.router.navigate(['/auth/login']), 1000);
     },
     error: (err) => {
-      console.log("7. API Error", err);
       this.loading = false;
+      this.toastService.error(err.error?.message || 'Unable to verify your email.');
     }
   });
 }
 
   handleResendOtp(): void {
-    this.errorMessage = null;
-    this.successMessage = null;
+    if (this.loading) {
+      return;
+    }
+
+    this.loading = true;
 
     this.authService.resendVerification(this.userEmail).subscribe({
       next: (res) => {
+        this.loading = false;
         if (res.success) {
-          this.successMessage = 'A new verification code has been sent to your email.';
+          this.toastService.success(res.message || 'A new verification code has been sent to your email.');
         } else {
-          this.errorMessage = res.message || 'Failed to resend code.';
+          this.toastService.error(res.message || 'Failed to resend code.');
         }
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Error resending verification code.';
+        this.loading = false;
+        this.toastService.error(err.error?.message || 'Error resending verification code.');
       }
     });
   }
 }
-

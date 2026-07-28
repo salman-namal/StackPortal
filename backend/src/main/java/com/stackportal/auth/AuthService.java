@@ -44,8 +44,12 @@ public class AuthService {
 
     @Transactional
     public ApiResponse<Void> register(RegisterRequest request, String appBaseUrl) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new ApiException("Username is already taken.", HttpStatus.BAD_REQUEST);
+        }
+
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ApiException("Email already in use", HttpStatus.BAD_REQUEST);
+            throw new ApiException("Email is already registered.", HttpStatus.BAD_REQUEST);
         }
 
         Role userRole = roleRepository.findByRoleName(RoleName.USER)
@@ -53,6 +57,7 @@ public class AuthService {
 
         User user = User.builder()
                 .name(request.getName())
+                .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .active(false)
@@ -80,7 +85,7 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailOrUsername(request.getEmail(), request.getEmail())
                 .orElseThrow(() -> new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED));
 
         if (!user.isEnabled()) {

@@ -7,6 +7,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { JwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { ErrorInterceptor } from './core/interceptors/error.interceptor';
+import { ToastHostComponent } from './shared/components/toast-host/toast-host.component';
 
 @NgModule({
   declarations: [AppComponent],
@@ -15,7 +16,8 @@ import { ErrorInterceptor } from './core/interceptors/error.interceptor';
     HttpClientModule,
     FormsModule,
     ReactiveFormsModule,
-    AppRoutingModule
+    AppRoutingModule,
+    ToastHostComponent
   ],
   providers: [
     {

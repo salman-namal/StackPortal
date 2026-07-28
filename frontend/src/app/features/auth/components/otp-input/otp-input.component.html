@@ -5,6 +5,7 @@
       #otpInput
       class="otp-box"
       type="text"
+      [disabled]="disabled"
       inputmode="numeric"
       pattern="[0-9]*"
       maxlength="6"
@@ -20,6 +21,6 @@
   <div class="otp-resend-row">
     <span class="resend-text">Didn't receive the code?</span>
     <span *ngIf="!canResend" class="timer-badge">Resend code in {{ formatTime(countdown) }}</span>
-    <button *ngIf="canResend" type="button" class="resend-btn" (click)="handleResend()">Resend OTP</button>
+    <button *ngIf="canResend" type="button" class="resend-btn" [disabled]="disabled" (click)="handleResend()">Resend OTP</button>
   </div>
 </div>

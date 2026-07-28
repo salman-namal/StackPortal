@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
 import { ApiResponse, AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-reset-password',
@@ -20,7 +21,6 @@ export class ResetPasswordComponent implements OnInit {
   showConfirmPassword = false;
   loading = false;
   submitted = false;
-  errorMessage: string | null = null;
   token: string | null = null;
 
   strengthScore = 0;
@@ -30,7 +30,8 @@ export class ResetPasswordComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -43,9 +44,6 @@ export class ResetPasswordComponent implements OnInit {
     );
 
     this.token = this.route.snapshot.queryParamMap.get('token');
-    if (!this.token) {
-      this.errorMessage = 'This password reset link is invalid.';
-    }
   }
 
   passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -84,15 +82,13 @@ export class ResetPasswordComponent implements OnInit {
 
   onSubmit(): void {
     this.submitted = true;
-    this.errorMessage = null;
-
     if (this.resetForm.invalid) {
       this.resetForm.markAllAsTouched();
       return;
     }
 
     if (!this.token) {
-      this.errorMessage = 'This password reset link is invalid.';
+      this.toastService.error('This password reset link is invalid.');
       return;
     }
 
@@ -102,8 +98,16 @@ export class ResetPasswordComponent implements OnInit {
     this.authService.resetPassword(this.token, password, confirmPassword)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: () => void this.router.navigate(['/auth/login']),
-        error: (error: HttpErrorResponse) => this.errorMessage = this.getBackendErrorMessage(error)
+        next: (response) => {
+          if (!response.success) {
+            this.toastService.error(response.message || 'Unable to reset your password. Please try again.');
+            return;
+          }
+
+          this.toastService.success('Password updated successfully.');
+          window.setTimeout(() => void this.router.navigate(['/auth/login']), 1000);
+        },
+        error: (error: HttpErrorResponse) => this.toastService.error(this.getBackendErrorMessage(error))
       });
   }
 

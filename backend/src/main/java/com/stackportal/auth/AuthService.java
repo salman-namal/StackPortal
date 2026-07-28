@@ -39,6 +39,9 @@ public class AuthService {
     @Value("${server.port:8080}")
     private int serverPort;
 
+    @Value("${app.frontend-url:http://localhost:4200}")
+    private String frontendUrl;
+
     @Transactional
     public ApiResponse<Void> register(RegisterRequest request, String appBaseUrl) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -72,7 +75,7 @@ public class AuthService {
         return ApiResponse.ok("Registration successful. Please check your email for the verification code.", null);
     }
 
-    public ApiResponse<AuthResponse> login(LoginRequest request) {
+    public ApiResponse<LoginResponse> login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
@@ -84,7 +87,7 @@ public class AuthService {
             throw new ApiException("Account is not active or email not verified", HttpStatus.FORBIDDEN);
         }
 
-        return buildAuthResponse(user);
+        return buildLoginResponse(user);
     }
 
     public ApiResponse<AuthResponse> refreshToken(String refreshToken) {
@@ -153,40 +156,50 @@ public class AuthService {
     }
 
     @Transactional
-    public ApiResponse<Void> forgotPassword(ForgotPasswordRequest request, String appBaseUrl) {
+    public ApiResponse<Void> forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
+
+        passwordResetTokenRepository.deleteByUser(user);
 
         String tokenValue = UUID.randomUUID().toString();
         PasswordResetToken token = PasswordResetToken.builder()
                 .token(tokenValue)
                 .user(user)
-                .expiresAt(Instant.now().plus(1, ChronoUnit.HOURS))
+                .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
                 .used(false)
                 .build();
         passwordResetTokenRepository.save(token);
 
-        String resetLink = appBaseUrl + "/reset-password?token=" + tokenValue;
+        String resetLink = frontendUrl.replaceAll("/+$", "") + "/auth/reset-password?token=" + tokenValue;
         emailService.sendPasswordReset(user.getEmail(), resetLink);
 
-        return ApiResponse.ok("Password reset link sent to email", null);
+        return ApiResponse.ok("A password reset link has been sent to your email.", null);
     }
 
     @Transactional
     public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
         PasswordResetToken token = passwordResetTokenRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new ApiException("Invalid reset token", HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new ApiException("Invalid password reset token", HttpStatus.BAD_REQUEST));
 
-        if (token.isUsed() || token.getExpiresAt().isBefore(Instant.now())) {
-            throw new ApiException("Reset token expired or already used", HttpStatus.BAD_REQUEST);
+        if (token.isUsed()) {
+            throw new ApiException("Password reset token has already been used", HttpStatus.BAD_REQUEST);
+        }
+
+        if (token.getExpiresAt().isBefore(Instant.now())) {
+            passwordResetTokenRepository.delete(token);
+            throw new ApiException("Password reset token has expired", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ApiException("Passwords do not match", HttpStatus.BAD_REQUEST);
         }
 
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        token.setUsed(true);
-        passwordResetTokenRepository.save(token);
+        passwordResetTokenRepository.delete(token);
 
         return ApiResponse.ok("Password reset successfully", null);
     }
@@ -253,6 +266,28 @@ public class AuthService {
         return ApiResponse.ok("Authentication successful", authResponse);
     }
 
+    private ApiResponse<LoginResponse> buildLoginResponse(User user) {
+        ApiResponse<AuthResponse> authResponse = buildAuthResponse(user);
+        AuthResponse tokens = authResponse.getData();
+
+        AuthenticatedUserResponse authenticatedUser = AuthenticatedUserResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .roles(tokens.getRoles())
+                .emailVerified(user.isEmailVerified())
+                .build();
+
+        LoginResponse loginResponse = LoginResponse.builder()
+                .accessToken(tokens.getAccessToken())
+                .refreshToken(tokens.getRefreshToken())
+                .tokenType(tokens.getTokenType())
+                .user(authenticatedUser)
+                .build();
+
+        return ApiResponse.ok(authResponse.getMessage(), loginResponse);
+    }
+
     private String generateOtp() {
         String otp;
         SecureRandom random = new SecureRandom();
@@ -261,5 +296,6 @@ public class AuthService {
         } while (emailVerificationTokenRepository.existsByToken(otp));
         return otp;
     }
+
 }
 

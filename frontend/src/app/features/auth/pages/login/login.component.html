@@ -1,5 +1,9 @@
 <app-auth-layout title="Sign in" subtitle="Welcome back! Please sign in to continue.">
   <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+    <div *ngIf="errorMessage" class="form-error main-error" role="alert">
+      {{ errorMessage }}
+    </div>
+
     <!-- Email Field -->
     <div class="form-group">
       <label for="email">Email address</label>
@@ -70,9 +74,6 @@
       </svg>
     </button>
   </form>
-
-  <!-- Google Auth -->
-  <app-social-login label="Continue with Google" [loading]="googleLoading" (googleClick)="handleGoogleLogin()"></app-social-login>
 
   <!-- Bottom Link -->
   <p class="auth-bottom-text">

@@ -1,166 +1,175 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, QueryList, ViewChildren } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  QueryList,
+  ViewChildren,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+
+const OTP_LENGTH = 6;
 
 @Component({
   selector: 'app-otp-input',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './otp-input.component.html',
-  styleUrls: ['./otp-input.component.scss']
+  styleUrl: './otp-input.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OtpInputComponent implements OnInit, OnDestroy {
-  @Input() length = 6;
   @Input() initialCountdown = 45;
   @Output() otpSubmit = new EventEmitter<string>();
   @Output() resendOtp = new EventEmitter<void>();
 
-  @ViewChildren('otpInput') inputs!: QueryList<ElementRef<HTMLInputElement>>;
+  @ViewChildren('otpInput') private readonly inputs!: QueryList<ElementRef<HTMLInputElement>>;
 
-  digits: string[] = [];
+  readonly otpLength = OTP_LENGTH;
+  digits = Array.from({ length: OTP_LENGTH }, () => '');
   countdown = 45;
-  timerInterval: any = null;
   canResend = false;
 
- ngOnInit(): void {
-  this.digits = Array(this.length).fill('');
-  this.countdown = this.initialCountdown;
-  this.startTimer();
-  console.log("OTP COMPONENT LOADED");
-}
+  private timerId: ReturnType<typeof setInterval> | null = null;
+  private wasComplete = false;
+
+  constructor(private readonly changeDetectorRef: ChangeDetectorRef) {}
+
+  ngOnInit(): void {
+    this.startTimer();
+  }
 
   ngOnDestroy(): void {
     this.stopTimer();
   }
 
-  startTimer(): void {
-    this.stopTimer();
-    this.canResend = false;
-    this.countdown = this.initialCountdown;
+  onInput(event: Event, index: number): void {
+    const value = this.numericValue((event.target as HTMLInputElement).value);
 
-    this.timerInterval = setInterval(() => {
-      if (this.countdown > 0) {
-        this.countdown--;
-      } else {
-        this.canResend = true;
-        this.stopTimer();
-      }
-    }, 1000);
-  }
+    // Browser OTP autofill can place the whole code into one input.
+    if (value.length > 1) {
+      this.setDigits(value.length >= OTP_LENGTH ? value.slice(0, OTP_LENGTH) : value, value.length >= OTP_LENGTH ? 0 : index);
+      return;
+    }
 
-  stopTimer(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
+    this.digits[index] = value;
+    this.updateCompletionState();
+
+    if (value && index < OTP_LENGTH - 1) {
+      this.focusInput(index + 1);
     }
   }
 
- onInput(event: Event, index: number): void {
-  const input = event.target as HTMLInputElement;
-
-  // Keep only numeric characters
-  const value = input.value.replace(/\D/g, '');
-
-  // Handle browser autofill or paste into a single box
-  if (value.length > 1) {
-    const chars = value.substring(0, this.length - index).split('');
-
-    chars.forEach((char, i) => {
-      this.digits[index + i] = char;
-
-      const el = this.inputs.toArray()[index + i];
-      if (el) {
-        el.nativeElement.value = char;
-      }
-    });
-
-    const nextIndex = Math.min(index + chars.length, this.length - 1);
-    this.inputs.toArray()[nextIndex]?.nativeElement.focus();
-
-    this.checkCompletion();
-    return;
-  }
-
-  // Normal typing
-  const digit = value.slice(-1);
-  input.value = digit;
-  this.digits[index] = digit;
-
-  if (digit && index < this.length - 1) {
-    this.inputs.toArray()[index + 1]?.nativeElement.focus();
-  }
-
-  this.checkCompletion();
-}
-
-  onKeyDown(event: KeyboardEvent, index: number): void {
-    // Handle backspace navigation
-    if (event.key === 'Backspace') {
-      if (!this.digits[index] && index > 0) {
-        const prevInput = this.inputs.toArray()[index - 1];
-        if (prevInput) {
-          prevInput.nativeElement.value = '';
-          prevInput.nativeElement.focus();
-          this.digits[index - 1] = '';
-        }
-      } else {
-        const input = event.target as HTMLInputElement;
-        input.value = '';
-        this.digits[index] = '';
-      }
+  onKeydown(event: KeyboardEvent, index: number): void {
+    if (event.key !== 'Backspace' || this.digits[index] || index === 0) {
+      return;
     }
-  }
 
-  onPaste(event: ClipboardEvent): void {
     event.preventDefault();
-    const clipboardData = event.clipboardData;
-    if (!clipboardData) return;
-
-    const pastedData = clipboardData.getData('text').trim();
-    if (!/^\d+$/.test(pastedData)) return;
-
-    const codeDigits = pastedData.slice(0, this.length).split('');
-    codeDigits.forEach((digit, i) => {
-      if (i < this.length) {
-        this.digits[i] = digit;
-        const inputEl = this.inputs.toArray()[i];
-        if (inputEl) {
-          inputEl.nativeElement.value = digit;
-        }
-      }
-    });
-
-    // Focus last filled box or next box
-    const nextFocusIndex = Math.min(codeDigits.length, this.length - 1);
-    const targetInput = this.inputs.toArray()[nextFocusIndex];
-    if (targetInput) {
-      targetInput.nativeElement.focus();
-    }
-
-    this.checkCompletion();
+    this.digits[index - 1] = '';
+    this.updateCompletionState();
+    this.focusInput(index - 1);
   }
 
-  checkCompletion(): void {
-    const fullCode = this.digits.join('');
-    if (fullCode.length === this.length && !this.digits.includes('')) {
-      this.otpSubmit.emit(fullCode);
+  onPaste(event: ClipboardEvent, index: number): void {
+    event.preventDefault();
+    const pastedValue = this.numericValue(event.clipboardData?.getData('text') ?? '');
+
+    if (!pastedValue) {
+      return;
     }
+
+    // A full OTP should work no matter which box received the paste.
+    this.setDigits(pastedValue.slice(0, OTP_LENGTH), pastedValue.length >= OTP_LENGTH ? 0 : index);
   }
 
   handleResend(): void {
-    if (this.canResend) {
-      this.digits = Array(this.length).fill('');
-      this.inputs.forEach((input) => (input.nativeElement.value = ''));
-      const firstInput = this.inputs.toArray()[0];
-      if (firstInput) firstInput.nativeElement.focus();
-
-      this.resendOtp.emit();
-      this.startTimer();
+    if (!this.canResend) {
+      return;
     }
+
+    this.digits = Array.from({ length: OTP_LENGTH }, () => '');
+    this.wasComplete = false;
+    this.resendOtp.emit();
+    this.startTimer();
+    this.focusInput(0);
   }
 
   formatTime(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  private setDigits(value: string, startIndex: number): void {
+    const nextDigits = [...this.digits];
+    const values = value.slice(0, OTP_LENGTH - startIndex).split('');
+
+    values.forEach((digit, offset) => {
+      nextDigits[startIndex + offset] = digit;
+    });
+
+    this.digits = nextDigits;
+    this.updateCompletionState();
+
+    const nextIndex = Math.min(startIndex + values.length, OTP_LENGTH - 1);
+    this.focusInput(nextIndex);
+  }
+
+  private updateCompletionState(): void {
+    const code = this.digits.join('');
+    const isComplete = this.digits.every((digit) => digit !== '');
+
+    if (isComplete && !this.wasComplete) {
+      this.otpSubmit.emit(code);
+    }
+
+    this.wasComplete = isComplete;
+  }
+
+  private startTimer(): void {
+    this.stopTimer();
+    this.countdown = Math.max(0, this.initialCountdown);
+    this.canResend = this.countdown === 0;
+
+    if (this.canResend) {
+      return;
+    }
+
+    this.timerId = setInterval(() => {
+      this.countdown--;
+
+      if (this.countdown <= 0) {
+        this.countdown = 0;
+        this.canResend = true;
+        this.stopTimer();
+      }
+
+      this.changeDetectorRef.markForCheck();
+    }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.timerId !== null) {
+      clearInterval(this.timerId);
+      this.timerId = null;
+    }
+  }
+
+  private focusInput(index: number): void {
+    queueMicrotask(() => this.inputs?.get(index)?.nativeElement.focus());
+  }
+
+  private numericValue(value: string): string {
+    return value.replace(/\D/g, '');
   }
 }

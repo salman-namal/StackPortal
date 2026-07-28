@@ -29,7 +29,9 @@ public class EmailService {
         message.setTo(to);
         message.setFrom(from);
         message.setSubject("Reset your Stack Portal password");
-        message.setText("Please click the link below to reset your password:\n" + resetLink);
+        message.setText("Use the link below to reset your Stack Portal password.\n\n"
+                + resetLink
+                + "\n\nThis link will expire in 15 minutes.");
         mailSender.send(message);
     }
 

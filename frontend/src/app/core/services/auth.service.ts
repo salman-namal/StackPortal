@@ -13,6 +13,25 @@ export interface AuthResponse {
   };
 }
 
+export interface AuthenticatedUser {
+  id: number;
+  name: string;
+  email: string;
+  roles: string[];
+  emailVerified: boolean;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    tokenType: string;
+    user: AuthenticatedUser;
+  };
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -25,16 +44,17 @@ export class AuthService {
   private readonly accessTokenKey = 'access_token';
   private readonly refreshTokenKey = 'refresh_token';
   private readonly rolesKey = 'roles';
+  private readonly userKey = 'authenticated_user';
 
   private loggedIn$ = new BehaviorSubject<boolean>(this.hasValidToken());
   private roles$ = new BehaviorSubject<string[]>(this.getStoredRoles());
 
   constructor(private http: HttpClient) {}
 
-  login(email: string, password: string): Observable<AuthResponse> {
+  login(email: string, password: string): Observable<LoginResponse> {
     return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password })
-      .pipe(tap(res => this.handleAuthSuccess(res)));
+      .post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password })
+      .pipe(tap(res => this.handleLoginSuccess(res)));
   }
 
   register(name: string, email: string, password: string): Observable<ApiResponse<void>> {
@@ -58,10 +78,11 @@ export class AuthService {
     return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/forgot-password`, { email });
   }
 
-  resetPassword(token: string, newPassword: string): Observable<ApiResponse<void>> {
+  resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<ApiResponse<void>> {
     return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/reset-password`, {
       token,
-      newPassword
+      newPassword,
+      confirmPassword
     });
   }
 
@@ -86,6 +107,21 @@ export class AuthService {
 
   getRefreshToken(): string | null {
     return localStorage.getItem(this.refreshTokenKey);
+  }
+
+  getCurrentUser(): AuthenticatedUser | null {
+    const rawUser = localStorage.getItem(this.userKey);
+
+    if (!rawUser) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawUser) as AuthenticatedUser;
+    } catch {
+      localStorage.removeItem(this.userKey);
+      return null;
+    }
   }
 
   isLoggedIn$(): Observable<boolean> {
@@ -120,10 +156,24 @@ export class AuthService {
     this.roles$.next(res.data.roles || []);
   }
 
+  private handleLoginSuccess(res: LoginResponse): void {
+    if (!res.success || !res.data?.accessToken || !res.data?.refreshToken || !res.data.user) {
+      return;
+    }
+
+    localStorage.setItem(this.accessTokenKey, res.data.accessToken);
+    localStorage.setItem(this.refreshTokenKey, res.data.refreshToken);
+    localStorage.setItem(this.userKey, JSON.stringify(res.data.user));
+    localStorage.setItem(this.rolesKey, JSON.stringify(res.data.user.roles || []));
+    this.loggedIn$.next(true);
+    this.roles$.next(res.data.user.roles || []);
+  }
+
   private clearAuth(): void {
     localStorage.removeItem(this.accessTokenKey);
     localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.rolesKey);
+    localStorage.removeItem(this.userKey);
     this.loggedIn$.next(false);
     this.roles$.next([]);
   }

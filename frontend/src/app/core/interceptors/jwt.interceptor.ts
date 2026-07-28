@@ -14,7 +14,9 @@ export class JwtInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const token = this.auth.getAccessToken();
-    if (token) {
+    const isPublicAuthRequest = req.url.includes('/api/auth/');
+
+    if (token && !isPublicAuthRequest) {
       const cloned = req.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`

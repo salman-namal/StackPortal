@@ -38,7 +38,7 @@ export class ResetPasswordComponent {
     this.message = null;
 
     const { password } = this.form.value;
-    this.auth.resetPassword(this.token, password!).subscribe({
+    this.auth.resetPassword(this.token, password!, password!).subscribe({
       next: res => {
         this.loading = false;
         this.message = res.message || 'Password reset successfully.';

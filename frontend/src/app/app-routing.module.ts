@@ -15,6 +15,11 @@ const routes: Routes = [
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
   },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./admin/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    canActivate: [AuthGuard]
+  },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   { path: '**', redirectTo: 'auth/login' }
 ];

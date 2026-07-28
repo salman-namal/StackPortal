@@ -1,8 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { RouterModule } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
+import { ApiResponse, AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -15,8 +18,13 @@ export class ForgotPasswordComponent implements OnInit {
   forgotForm!: FormGroup;
   loading = false;
   submitted = false;
+  errorMessage: string | null = null;
+  successMessage: string | null = null;
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.forgotForm = this.fb.group({
@@ -31,6 +39,8 @@ export class ForgotPasswordComponent implements OnInit {
 
   onSubmit(): void {
     this.submitted = true;
+    this.errorMessage = null;
+    this.successMessage = null;
 
     if (this.forgotForm.invalid) {
       this.forgotForm.markAllAsTouched();
@@ -38,9 +48,21 @@ export class ForgotPasswordComponent implements OnInit {
     }
 
     this.loading = true;
-    setTimeout(() => {
-      this.loading = false;
-      this.router.navigate(['/auth/reset-password']);
-    }, 1200);
+    const email = this.forgotForm.getRawValue().email.trim();
+
+    this.authService.forgotPassword(email)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: () => this.successMessage = 'Check your email for a password reset link.',
+        error: (error: HttpErrorResponse) => this.errorMessage = this.getBackendErrorMessage(error)
+      });
+  }
+
+  private getBackendErrorMessage(error: HttpErrorResponse): string {
+    const response = error.error as ApiResponse<Record<string, string>> | undefined;
+    const validationErrors = response?.data;
+    return validationErrors && typeof validationErrors === 'object'
+      ? Object.values(validationErrors).join(' ') || response.message
+      : response?.message || 'Unable to send a password reset link. Please try again.';
   }
 }

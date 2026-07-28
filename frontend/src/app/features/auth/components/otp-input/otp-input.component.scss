@@ -13,9 +13,11 @@
 }
 
 .otp-box {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   height: 3.5rem;
   max-width: 3.5rem;
+  padding: 0;
   text-align: center;
   font-size: 1.4rem;
   font-weight: 700;
@@ -24,7 +26,7 @@
   border: 1px solid var(--auth-border);
   border-radius: 12px;
   outline: none;
-  transition: all 200ms ease;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 
   &:hover {
@@ -42,29 +44,36 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.875rem;
-  color: var(--auth-muted);
   flex-wrap: wrap;
   gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--auth-muted);
 }
 
 .timer-badge {
+  padding: 0.25rem 0.6rem;
   font-weight: 600;
   color: var(--auth-primary);
   background-color: rgba(37, 99, 235, 0.1);
-  padding: 0.25rem 0.6rem;
   border-radius: 6px;
 }
 
 .resend-btn {
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--auth-primary);
+  cursor: pointer;
   background: transparent;
   border: none;
-  color: var(--auth-primary);
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0;
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+@media (max-width: 360px) {
+  .otp-grid {
+    gap: 0.35rem;
   }
 }

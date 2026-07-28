@@ -1,8 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
+import { ApiResponse, AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-reset-password',
@@ -17,11 +20,18 @@ export class ResetPasswordComponent implements OnInit {
   showConfirmPassword = false;
   loading = false;
   submitted = false;
+  errorMessage: string | null = null;
+  token: string | null = null;
 
   strengthScore = 0;
   strengthLabel = 'Weak';
 
-  constructor(private fb: FormBuilder, private router: Router) {}
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly authService: AuthService,
+    private readonly route: ActivatedRoute,
+    private readonly router: Router
+  ) {}
 
   ngOnInit(): void {
     this.resetForm = this.fb.group(
@@ -31,6 +41,11 @@ export class ResetPasswordComponent implements OnInit {
       },
       { validators: this.passwordMatchValidator }
     );
+
+    this.token = this.route.snapshot.queryParamMap.get('token');
+    if (!this.token) {
+      this.errorMessage = 'This password reset link is invalid.';
+    }
   }
 
   passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -69,16 +84,34 @@ export class ResetPasswordComponent implements OnInit {
 
   onSubmit(): void {
     this.submitted = true;
+    this.errorMessage = null;
 
     if (this.resetForm.invalid) {
       this.resetForm.markAllAsTouched();
       return;
     }
 
+    if (!this.token) {
+      this.errorMessage = 'This password reset link is invalid.';
+      return;
+    }
+
     this.loading = true;
-    setTimeout(() => {
-      this.loading = false;
-      this.router.navigate(['/auth/password-reset-success']);
-    }, 1200);
+    const { password, confirmPassword } = this.resetForm.getRawValue();
+
+    this.authService.resetPassword(this.token, password, confirmPassword)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: () => void this.router.navigate(['/auth/login']),
+        error: (error: HttpErrorResponse) => this.errorMessage = this.getBackendErrorMessage(error)
+      });
+  }
+
+  private getBackendErrorMessage(error: HttpErrorResponse): string {
+    const response = error.error as ApiResponse<Record<string, string>> | undefined;
+    const validationErrors = response?.data;
+    return validationErrors && typeof validationErrors === 'object'
+      ? Object.values(validationErrors).join(' ') || response.message
+      : response?.message || 'Unable to reset your password. Please try again.';
   }
 }

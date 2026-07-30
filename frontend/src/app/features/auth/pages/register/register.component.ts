@@ -4,7 +4,7 @@ import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validatio
 import { Router, RouterModule } from '@angular/router';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
 import { SocialLoginComponent } from '../../components/social-login/social-login.component';
-import { AuthService } from '../../../../core/services/auth.service';
+import { AuthService, LoginResponse } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -109,11 +109,29 @@ export class RegisterComponent implements OnInit {
     });
   }
 
-  handleGoogleLogin(): void {
+  async handleGoogleLogin(): Promise<void> {
+    if (this.googleLoading) {
+      return;
+    }
+
+    this.errorMessage = null;
     this.googleLoading = true;
-    setTimeout(() => {
+
+    try {
+      const response = await this.authService.signInWithGoogle();
+      if (this.isSuccessfulLogin(response)) {
+        await this.router.navigate(['/dashboard']);
+      } else {
+        this.errorMessage = response.message || 'Google Sign-In failed. Please try again.';
+      }
+    } catch (error: any) {
+      this.errorMessage = error?.error?.message || 'Google Sign-In failed. Please try again.';
+    } finally {
       this.googleLoading = false;
-      this.router.navigate(['/admin']);
-    }, 1500);
+    }
+  }
+
+  private isSuccessfulLogin(response: LoginResponse): boolean {
+    return !!(response.success && response.data?.accessToken && response.data?.refreshToken && response.data.user);
   }
 }

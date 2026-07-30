@@ -74,6 +74,8 @@
     </button>
   </form>
 
+  <app-social-login label="Continue with Google" [loading]="googleLoading" (googleClick)="handleGoogleLogin()"></app-social-login>
+
   <!-- Bottom Link -->
   <p class="auth-bottom-text">
     Don't have an account? <a routerLink="/auth/register" class="auth-link">Sign up</a>

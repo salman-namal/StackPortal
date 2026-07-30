@@ -1,6 +1,23 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable, tap } from 'rxjs';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize(configuration: { client_id: string; callback: (response: { credential?: string }) => void }): void;
+          prompt(callback: (notification: {
+            isNotDisplayed(): boolean;
+            isSkippedMoment(): boolean;
+            isDismissedMoment(): boolean;
+          }) => void): void;
+        };
+      };
+    };
+  }
+}
 
 export interface AuthResponse {
   success: boolean;
@@ -17,6 +34,7 @@ export interface AuthenticatedUser {
   id: number;
   name: string;
   email: string;
+  username: string;
   roles: string[];
   emailVerified: boolean;
 }
@@ -45,6 +63,7 @@ export class AuthService {
   private readonly refreshTokenKey = 'refresh_token';
   private readonly rolesKey = 'roles';
   private readonly userKey = 'authenticated_user';
+  private readonly googleClientId = '{{Local}}';
 
   private loggedIn$ = new BehaviorSubject<boolean>(this.hasValidToken());
   private roles$ = new BehaviorSubject<string[]>(this.getStoredRoles());
@@ -87,10 +106,15 @@ export class AuthService {
     });
   }
 
-  googleLogin(idToken: string): Observable<AuthResponse> {
+  googleLogin(idToken: string): Observable<LoginResponse> {
     return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/google-login`, { idToken })
-      .pipe(tap(res => this.handleAuthSuccess(res)));
+      .post<LoginResponse>(`${this.apiUrl}/auth/google`, { idToken })
+      .pipe(tap(res => this.handleLoginSuccess(res)));
+  }
+
+  async signInWithGoogle(): Promise<LoginResponse> {
+    const idToken = await this.requestGoogleIdToken();
+    return firstValueFrom(this.googleLogin(idToken));
   }
 
   logout(): Observable<ApiResponse<void>> {
@@ -168,6 +192,58 @@ export class AuthService {
     localStorage.setItem(this.rolesKey, JSON.stringify(res.data.user.roles || []));
     this.loggedIn$.next(true);
     this.roles$.next(res.data.user.roles || []);
+  }
+
+  private async requestGoogleIdToken(): Promise<string> {
+    await this.loadGoogleIdentityServices();
+
+    return new Promise<string>((resolve, reject) => {
+      if (!window.google) {
+        reject(new Error('Google Sign-In is unavailable.'));
+        return;
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: this.googleClientId,
+        callback: (response) => {
+          if (response.credential) {
+            resolve(response.credential);
+            return;
+          }
+
+          reject(new Error('Google Sign-In did not return an ID token.'));
+        }
+      });
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+          reject(new Error('Google Sign-In was cancelled or unavailable.'));
+        }
+      });
+    });
+  }
+
+  private loadGoogleIdentityServices(): Promise<void> {
+    if (window.google) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const existingScript = document.getElementById('google-identity-services');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Unable to load Google Sign-In.')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'google-identity-services';
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Unable to load Google Sign-In.'));
+      document.head.appendChild(script);
+    });
   }
 
   private clearAuth(): void {

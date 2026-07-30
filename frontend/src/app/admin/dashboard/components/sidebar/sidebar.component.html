@@ -1,0 +1,15 @@
+<aside class="sidebar" [class.open]="open" [class.collapsed]="collapsed">
+  <div class="brand">
+    <app-stack-portal-logo [compact]="collapsed" /><span class="brand-name">Stack Portal</span>
+    <button class="mobile-close" (click)="close.emit()" aria-label="Close menu"><app-dashboard-icon name="x" /></button>
+  </div>
+  <nav>
+    <a *ngFor="let link of links" [routerLink]="link.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: link.route === '/dashboard' }" [attr.data-tooltip]="link.label" [attr.aria-label]="link.label" (click)="close.emit()"><app-dashboard-icon [name]="link.icon" /><span class="nav-label">{{ link.label }}</span></a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-mini"><span class="avatar">{{ userName.slice(0, 1) }}</span><span class="user-details"><strong>{{ userName }}</strong><small>Workspace owner</small></span></div>
+    <button class="logout" (click)="logout.emit()"><app-dashboard-icon name="log-out" /><span class="logout-label">Log out</span></button>
+  </div>
+</aside>
+<button class="collapse-button" [class.collapsed]="collapsed" (click)="collapse.emit()" aria-label="Toggle Sidebar"><app-dashboard-icon name="chevron-left" /></button>
+<button class="backdrop" *ngIf="open" (click)="close.emit()" aria-label="Close menu"></button>

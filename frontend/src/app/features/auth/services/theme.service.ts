@@ -10,6 +10,10 @@ export class ThemeService {
 
   readonly theme$: Observable<boolean> = this.themeSubject.asObservable();
 
+  get isDark(): boolean {
+    return this.themeSubject.value;
+  }
+
   constructor() {
     this.applyTheme(this.themeSubject.value);
   }
@@ -34,7 +38,7 @@ export class ThemeService {
       return storedTheme === 'dark';
     }
 
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return true;
   }
 
   private applyTheme(isDark: boolean): void {

@@ -34,8 +34,16 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true, length = 150)
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private AuthProvider provider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_id", length = 255)
+    private String providerId;
 
     @Column(nullable = false)
     private boolean active = false;
@@ -61,6 +69,9 @@ public class User implements UserDetails {
     public void prePersist() {
         if (username == null || username.isBlank()) {
             username = email;
+        }
+        if (provider == null) {
+            provider = AuthProvider.LOCAL;
         }
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();

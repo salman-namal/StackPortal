@@ -60,6 +60,7 @@ public class AuthService {
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .provider(AuthProvider.LOCAL)
                 .active(false)
                 .emailVerified(false)
                 .roles(new HashSet<>(Collections.singletonList(userRole)))
@@ -210,7 +211,7 @@ public class AuthService {
     }
 
     @Transactional
-    public ApiResponse<AuthResponse> loginWithGoogle(GoogleLoginRequest request) {
+    public ApiResponse<LoginResponse> loginWithGoogle(GoogleLoginRequest request) {
         GoogleUserInfo googleUser = googleOAuth2Service.verifyIdToken(request.getIdToken());
         if (googleUser == null || googleUser.getEmail() == null) {
             throw new ApiException("Invalid Google token", HttpStatus.UNAUTHORIZED);
@@ -223,7 +224,7 @@ public class AuthService {
             throw new ApiException("Account is deactivated", HttpStatus.FORBIDDEN);
         }
 
-        return buildAuthResponse(user);
+        return buildLoginResponse(user);
     }
 
     private User createUserFromGoogle(GoogleUserInfo googleUser) {
@@ -231,9 +232,12 @@ public class AuthService {
                 .orElseThrow(() -> new ApiException("Default USER role not configured", HttpStatus.INTERNAL_SERVER_ERROR));
 
         User user = User.builder()
-                .name(googleUser.getName())
+                .name(googleUser.getName() == null || googleUser.getName().isBlank() ? googleUser.getEmail() : googleUser.getName())
                 .email(googleUser.getEmail())
-                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .username(generateGoogleUsername(googleUser.getEmail()))
+                .provider(AuthProvider.GOOGLE)
+                .providerId(googleUser.getSubject())
+                .password(null)
                 .active(true)
                 .emailVerified(true)
                 .roles(new HashSet<>(Collections.singletonList(userRole)))
@@ -279,6 +283,7 @@ public class AuthService {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .username(user.getUsername())
                 .roles(tokens.getRoles())
                 .emailVerified(user.isEmailVerified())
                 .build();
@@ -300,6 +305,21 @@ public class AuthService {
             otp = String.format("%06d", random.nextInt(1000000));
         } while (emailVerificationTokenRepository.existsByToken(otp));
         return otp;
+    }
+
+    private String generateGoogleUsername(String email) {
+        String emailPrefix = email.substring(0, email.indexOf('@'));
+        String baseUsername = emailPrefix.isBlank() ? "googleuser" : emailPrefix;
+        baseUsername = baseUsername.substring(0, Math.min(baseUsername.length(), 150));
+
+        String username = baseUsername;
+        int suffix = 1;
+        while (userRepository.existsByUsername(username)) {
+            String suffixValue = String.valueOf(suffix++);
+            username = baseUsername.substring(0, Math.min(baseUsername.length(), 150 - suffixValue.length())) + suffixValue;
+        }
+
+        return username;
     }
 
 }

@@ -15,6 +15,7 @@ public class AuthenticatedUserResponse {
     private Long id;
     private String name;
     private String email;
+    private String username;
     private Set<String> roles;
     private boolean emailVerified;
 }

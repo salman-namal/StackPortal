@@ -1,4 +1,20 @@
-<main>
-  <h1>Welcome to Stack Portal</h1>
-  <p *ngIf="user">Welcome, {{ user.name }}</p>
-</main>
+<div class="dashboard-shell">
+  <app-dashboard-sidebar
+    [open]="sidebarOpen"
+    [collapsed]="sidebarState.collapsed()"
+    [userName]="userName"
+    (close)="closeSidebar()"
+    (collapse)="toggleSidebarCollapse()"
+    (logout)="logout()"
+  />
+
+  <section class="dashboard-content" [class.sidebar-collapsed]="sidebarState.collapsed()">
+    <app-dashboard-navbar
+      [userName]="userName"
+      (menu)="toggleSidebar()"
+      (logout)="logout()"
+    />
+
+    <router-outlet />
+  </section>
+</div>

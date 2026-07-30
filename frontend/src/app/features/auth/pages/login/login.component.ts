@@ -6,11 +6,12 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
 import { finalize } from 'rxjs';
 import { ApiResponse, AuthService, LoginResponse } from '../../../../core/services/auth.service';
+import { SocialLoginComponent } from '../../components/social-login/social-login.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, AuthLayoutComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, AuthLayoutComponent, SocialLoginComponent],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
@@ -18,6 +19,7 @@ export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   showPassword = false;
   loading = false;
+  googleLoading = false;
   submitted = false;
   errorMessage: string | null = null;
 
@@ -64,6 +66,24 @@ export class LoginComponent implements OnInit {
           this.errorMessage = this.getBackendErrorMessage(error);
         }
       });
+  }
+
+  async handleGoogleLogin(): Promise<void> {
+    if (this.googleLoading) {
+      return;
+    }
+
+    this.errorMessage = null;
+    this.googleLoading = true;
+
+    try {
+      const response = await this.authService.signInWithGoogle();
+      this.handleLoginResponse(response);
+    } catch (error) {
+      this.errorMessage = this.getBackendErrorMessage(error as HttpErrorResponse);
+    } finally {
+      this.googleLoading = false;
+    }
   }
 
   private handleLoginResponse(response: LoginResponse): void {

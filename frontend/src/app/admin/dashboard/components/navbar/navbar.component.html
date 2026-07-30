@@ -1,0 +1,10 @@
+<header class="navbar">
+  <button class="menu" (click)="menu.emit()" aria-label="Open menu"><app-dashboard-icon name="menu" /></button>
+  <h1>Dashboard</h1>
+  <div class="nav-actions">
+    <label class="search" [class.focused]="searchFocused"><app-dashboard-icon name="search" /><input (input)="searchTerm = $any($event.target).value" (focus)="searchFocused = true" (blur)="searchFocused = false" placeholder="Search anything..." aria-label="Search" /><span *ngIf="searchTerm" class="search-hint">Press Enter</span></label>
+    <div class="dropdown-wrap"><button class="icon-button" (click)="notificationsOpen = !notificationsOpen; profileOpen = false" aria-label="Notifications"><app-dashboard-icon name="bell" /><i></i></button><div class="dropdown notifications" *ngIf="notificationsOpen"><strong>Notifications</strong><button *ngFor="let notification of notifications">{{ notification }}</button><a routerLink="/upcoming/messages">View all notifications</a></div></div>
+    <button class="icon-button theme" (click)="toggleTheme()" [attr.aria-label]="theme.isDark ? 'Switch to light theme' : 'Switch to dark theme'"><app-dashboard-icon [name]="theme.isDark ? 'sun' : 'moon'" /></button>
+    <div class="profile"><button class="profile-button" (click)="profileOpen=!profileOpen; notificationsOpen = false"><span class="profile-avatar">{{ userName.slice(0,1) }}</span><span class="profile-name">{{ userName }}</span><app-dashboard-icon name="chevron-down" /></button><div class="dropdown profile-menu" *ngIf="profileOpen"><a routerLink="/upcoming/settings">Profile</a><a routerLink="/upcoming/settings">Settings</a><button (click)="logout.emit()"><app-dashboard-icon name="log-out" /> Log out</button></div></div>
+  </div>
+</header>

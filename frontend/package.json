@@ -3,8 +3,9 @@
   "version": "0.0.1",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
+    "start": "npm run generate-env && ng serve",
+    "build": "npm run generate-env && ng build",
+    "generate-env": "node scripts/generate-env.js",
     "test": "ng test",
     "lint": "ng lint"
   },

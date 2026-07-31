@@ -71,7 +71,7 @@
 3. From `backend` folder:
    - `mvn clean install`
    - `mvn spring-boot:run`
-4. Backend runs on `http://localhost:8080`.
+4. Backend runs at the address configured by `BACKEND_URL`.
 
 ---
 
@@ -106,20 +106,14 @@
 1. From `frontend` folder:
    - `npm install`
    - `npm start` (runs `ng serve` via Angular CLI)
-2. App runs on `http://localhost:4200` and targets backend at `http://localhost:8080/api`.
+2. Copy `frontend/.env.example` to `frontend/.env`, set the runtime values, then run `npm start`.
 
 ---
 
 ### Environment configuration
 
-- **Backend** (`application.yml`):
-  - DB connection: change host/port/credentials if needed.
-  - JWT: configure `JWT_SECRET`, expiration values as env vars.
-  - Mail: set `MAIL_USERNAME` / `MAIL_PASSWORD` env vars; do not hardcode secrets.
-  - Google: set `GOOGLE_CLIENT_ID` and implement token verification in `GoogleOAuth2Service`.
-
-- **Frontend**:
-  - `AuthService.apiUrl` currently points to `http://localhost:8080/api`; adjust for production (e.g., move to `environment.ts`).
+- **Backend**: Copy `backend/.env.example` to `backend/.env` and provide every value. Spring Boot loads this file when started from either the repository root or the backend directory; process environment variables take precedence.
+- **Frontend**: Copy `frontend/.env.example` to `frontend/.env`. `npm start` and `npm run build` generate the browser runtime configuration from it. Do not put secrets in the frontend file because its values are visible to browser users.
 
 ---
 

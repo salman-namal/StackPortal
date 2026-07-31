@@ -6,7 +6,7 @@ Use this when the app runs (`ng serve`) but the browser shows a blank page.
 
 ## Step 1: Check the browser console
 
-1. Open **http://localhost:4200** in Chrome or Edge.
+1. Open the frontend address configured for the current environment in Chrome or Edge.
 2. Press **F12** (or right‑click → Inspect).
 3. Open the **Console** tab.
 4. Look for **red errors**.
@@ -33,8 +33,8 @@ Use this when the app runs (`ng serve`) but the browser shows a blank page.
 - **JS chunks (e.g. `auth-auth-module.js`) return 404**  
   → Lazy route path or file name wrong; fix `loadChildren` or move/rename the module file.
 
-- **API calls to `http://localhost:8080` fail with CORS**  
-  → Backend must allow `http://localhost:4200`. A `CorsConfig` (or equivalent) is in the backend; ensure the backend is running and allows origin `http://localhost:4200`.
+- **API calls fail with CORS**
+  → Backend must allow the origin in `CORS_ALLOWED_ORIGINS`. A `CorsConfig` (or equivalent) is in the backend; ensure it is running with the required configured origin.
 
 - **API returns 401/403**  
   → Expected if the route is protected; use login first or call a public endpoint to verify connectivity.
@@ -43,7 +43,7 @@ Use this when the app runs (`ng serve`) but the browser shows a blank page.
 
 ## Step 3: Verify routing
 
-1. Open **http://localhost:4200/auth/login** directly.
+1. Open the configured frontend address followed by `/auth/login` directly.
 2. You should see the **Login** form.
 
 - If **/** is blank but **/auth/login** works: the default route or redirect may be wrong (e.g. `path: ''` redirectTo `'auth/login'`).
@@ -66,9 +66,9 @@ Use this when the app runs (`ng serve`) but the browser shows a blank page.
 
 ## Step 5: Ensure backend and CORS
 
-1. Backend must be running: **http://localhost:8080**.
-2. Backend must allow the frontend origin in CORS (e.g. `http://localhost:4200`).
-3. In the browser, try: **http://localhost:8080/api/auth/...** (or a public endpoint).  
+1. Backend must be running at the address configured by `BACKEND_URL`.
+2. Backend must allow the frontend origin configured by `CORS_ALLOWED_ORIGINS`.
+3. In the browser, try an endpoint below the `API_BASE_URL` configured in `frontend/.env`.
    If CORS is misconfigured, the console will show a CORS error for that request.
 
 ---
@@ -77,7 +77,7 @@ Use this when the app runs (`ng serve`) but the browser shows a blank page.
 
 - **`main.ts`** – Added `import 'zone.js';` so Angular change detection runs.
 - **`tsconfig.app.json`** – Set `"include": ["src/**/*.ts"]` so all app code is compiled.
-- **Backend** – Added `CorsConfig` and enabled CORS in `SecurityConfig` for `http://localhost:4200`.
+- **Backend** – Added `CorsConfig` and enabled CORS in `SecurityConfig` using `CORS_ALLOWED_ORIGINS`.
 - **`app.component.html`** – Added a small header with a “Stack Portal” link so something is always visible when the app loads.
 
 If the page is still blank after these changes, the **exact message and stack trace** from the browser Console (and any failed request in Network) are needed to debug further.

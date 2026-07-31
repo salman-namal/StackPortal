@@ -10,6 +10,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import jakarta.validation.ConstraintViolationException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,11 +40,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler({ConstraintViolationException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ApiResponse<Object>> handleRequestValidationException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail("Invalid request parameters"));
+    }
+
     @ExceptionHandler({DisabledException.class, LockedException.class})
     public ResponseEntity<ApiResponse<Object>> handleInactiveAccount(AuthenticationException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.fail("Account is not active or email not verified"));
+                .body(ApiResponse.fail("Your account has been deactivated. Please contact your administrator."));
     }
 
     @ExceptionHandler(AuthenticationException.class)

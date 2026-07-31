@@ -36,10 +36,7 @@ public class AuthService {
     private final EmailService emailService;
     private final GoogleOAuth2Service googleOAuth2Service;
 
-    @Value("${server.port:8080}")
-    private int serverPort;
-
-    @Value("${app.frontend-url:http://localhost:4200}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     @Transactional
@@ -82,12 +79,16 @@ public class AuthService {
     }
 
     public ApiResponse<LoginResponse> login(LoginRequest request) {
+        User user = userRepository.findByEmailOrUsername(request.getEmail(), request.getEmail())
+                .orElseThrow(() -> new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED));
+
+        if (!user.isActive()) {
+            throw new ApiException("Your account has been deactivated. Please contact your administrator.", HttpStatus.FORBIDDEN);
+        }
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-
-        User user = userRepository.findByEmailOrUsername(request.getEmail(), request.getEmail())
-                .orElseThrow(() -> new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED));
 
         if (!user.isEnabled()) {
             throw new ApiException("Account is not active or email not verified", HttpStatus.FORBIDDEN);
@@ -105,6 +106,7 @@ public class AuthService {
         }
 
         User user = token.getUser();
+        ensureUserIsActive(user);
         return buildAuthResponse(user);
     }
 
@@ -220,9 +222,7 @@ public class AuthService {
         User user = userRepository.findByEmail(googleUser.getEmail())
                 .orElseGet(() -> createUserFromGoogle(googleUser));
 
-        if (!user.isActive()) {
-            throw new ApiException("Account is deactivated", HttpStatus.FORBIDDEN);
-        }
+        ensureUserIsActive(user);
 
         return buildLoginResponse(user);
     }
@@ -273,6 +273,12 @@ public class AuthService {
                 .build();
 
         return ApiResponse.ok("Authentication successful", authResponse);
+    }
+
+    private void ensureUserIsActive(User user) {
+        if (!user.isActive()) {
+            throw new ApiException("Your account has been deactivated. Please contact your administrator.", HttpStatus.FORBIDDEN);
+        }
     }
 
     private ApiResponse<LoginResponse> buildLoginResponse(User user) {

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom, Observable, tap } from 'rxjs';
+import { appConfig } from '../config/app-config';
 
 declare global {
   interface Window {
@@ -58,12 +59,12 @@ export interface ApiResponse<T> {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly apiUrl = 'http://localhost:8080/api';
+  private readonly apiUrl = appConfig.apiBaseUrl;
   private readonly accessTokenKey = 'access_token';
   private readonly refreshTokenKey = 'refresh_token';
   private readonly rolesKey = 'roles';
   private readonly userKey = 'authenticated_user';
-  private readonly googleClientId = '{{Local}}';
+  private readonly googleClientId = appConfig.googleClientId;
 
   private loggedIn$ = new BehaviorSubject<boolean>(this.hasValidToken());
   private roles$ = new BehaviorSubject<string[]>(this.getStoredRoles());
@@ -86,7 +87,6 @@ export class AuthService {
   }
 
   verifyEmail(token: string): Observable<ApiResponse<void>> {
-    console.log("3. Calling verifyEmail API with token:", token);
     return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/verify-email`, { token });
   }
 
@@ -195,6 +195,10 @@ export class AuthService {
   }
 
   private async requestGoogleIdToken(): Promise<string> {
+    if (!appConfig.enableGoogleSignIn || !this.googleClientId) {
+      throw new Error('Google Sign-In is not configured.');
+    }
+
     await this.loadGoogleIdentityServices();
 
     return new Promise<string>((resolve, reject) => {
@@ -237,7 +241,7 @@ export class AuthService {
 
       const script = document.createElement('script');
       script.id = 'google-identity-services';
-      script.src = 'https://accounts.google.com/gsi/client';
+      script.src = appConfig.googleIdentityServicesUrl;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();

@@ -1,1 +1,12 @@
-<main class="users-page"><header><div><p>WORKSPACE DIRECTORY</p><h1>Users</h1><span>Manage people, access, and workspace membership.</span></div></header><app-data-table [columns]="columns" [rows]="users" [filters]="filters" entityName="users" createButtonText="Create User" (create)="onCreate()" (deleteSelected)="onDeleteSelected($event)" (view)="onView($event)" (edit)="onEdit($event)" (delete)="onDelete($event)" /></main>
+<main class="users-page">
+  <header><div><p>WORKSPACE DIRECTORY</p><h1>Users</h1><span>Manage people, access, and workspace membership.</span></div></header>
+  <app-data-table [columns]="columns" [rows]="rows" [filters]="filters" [actions]="actions" [showBulkDelete]="true" [loading]="loading" [error]="error" [page]="page" [pageSize]="pageSize" [totalElements]="totalElements" [totalPages]="totalPages" [first]="first" [last]="last" [searchValue]="search" [sortBy]="sortBy" [sortDir]="sortDir" entityName="users" createButtonText="Create User" (searchChange)="onSearchChange($event)" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)" (sortChange)="onSortChange($event)" (filterChange)="onFilterChange($event)" (create)="onCreate()" (action)="onAction($event)" (bulkDelete)="onBulkDelete($event)" (refresh)="loadUsers()" />
+</main>
+
+<div *ngIf="viewingUser" class="user-dialog-backdrop" (click)="closeView()">
+  <section class="user-dialog" role="dialog" aria-modal="true" aria-labelledby="user-details-title" (click)="$event.stopPropagation()">
+    <header><div><p>USER DETAILS</p><h2 id="user-details-title">{{ viewingUser.name }}</h2></div><button type="button" aria-label="Close user details" (click)="closeView()"><span class="material-symbols-outlined">close</span></button></header>
+    <dl><div><dt>Username</dt><dd>{{ viewingUser.username }}</dd></div><div><dt>Email</dt><dd>{{ viewingUser.email }}</dd></div><div><dt>Role</dt><dd>{{ viewingUser.roles.join(', ') }}</dd></div><div><dt>Status</dt><dd [class.active]="viewingUser.active">{{ viewingUser.active ? 'Active' : 'Inactive' }}</dd></div><div><dt>Email verification</dt><dd>{{ viewingUser.emailVerified ? 'Verified' : 'Unverified' }}</dd></div><div><dt>Created</dt><dd>{{ viewingUser.createdAt | date:'medium' }}</dd></div></dl>
+    <footer><button type="button" (click)="closeView()">Close</button></footer>
+  </section>
+</div>

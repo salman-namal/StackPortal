@@ -1,23 +1,158 @@
-import { Component } from '@angular/core';
-import { DataTableColumn, DataTableComponent, DataTableFilter } from '../../shared/components/data-table/data-table.component';
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin, takeUntil } from 'rxjs';
+import { DataTableAction, DataTableActionEvent, DataTableColumn, DataTableComponent, DataTableFilter, DataTableFilterChange, DataTableSortChange } from '../../shared/components/data-table/data-table.component';
+import { PageResponse, UserDto, UsersService } from '../../core/services/users.service';
+import { ToastService } from '../../core/services/toast.service';
 
-interface UserRow extends Record<string, unknown> { id: number; name: string; email: string; username: string; department: string; role: string; country: string; status: string; createdDate: string; avatar: string | null; }
+type UserRow = UserDto & Record<string, unknown>;
 
-@Component({ selector: 'app-dashboard-users', standalone: true, imports: [DataTableComponent], templateUrl: './dashboard-users.component.html', styleUrl: './dashboard-users.component.scss' })
-export class DashboardUsersComponent {
+@Component({ selector: 'app-dashboard-users', standalone: true, imports: [CommonModule, DataTableComponent], templateUrl: './dashboard-users.component.html', styleUrl: './dashboard-users.component.scss' })
+export class DashboardUsersComponent implements OnInit, OnDestroy {
   readonly columns: DataTableColumn[] = [
-    { key: 'name', label: 'User', sortable: true, avatar: true }, { key: 'email', label: 'Email', sortable: true }, { key: 'username', label: 'Username', sortable: true }, { key: 'department', label: 'Department', sortable: true }, { key: 'role', label: 'Role', sortable: true, badge: true }, { key: 'country', label: 'Country', sortable: true }, { key: 'status', label: 'Status', sortable: true, badge: true }, { key: 'createdDate', label: 'Created', sortable: true }
+    { key: 'name', label: 'Name', sortable: true, avatar: true },
+    { key: 'email', label: 'Email', sortable: true },
+    { key: 'roles', label: 'Roles', badge: true },
+    { key: 'active', label: 'Status', sortable: true, badge: true, format: value => value ? 'Active' : 'Inactive' },
+    { key: 'emailVerified', label: 'Email Verified', sortable: true, badge: true, format: value => value ? 'Verified' : 'Unverified' },
+    { key: 'createdAt', label: 'Created Date', sortable: true, format: value => value ? new Date(String(value)).toLocaleDateString() : '—' }
   ];
-  readonly filters: DataTableFilter[] = [
-    { key: 'department', label: 'Department', options: ['Engineering', 'HR', 'Finance', 'Marketing'] }, { key: 'role', label: 'Role', options: ['Admin', 'Manager', 'User'] }, { key: 'status', label: 'Status', options: ['Active', 'Pending', 'Suspended', 'Inactive'] }
+  readonly actions: DataTableAction[] = [
+    { key: 'view', label: 'View', icon: 'visibility' },
+    { key: 'edit', label: 'Edit', icon: 'edit' },
+    { key: 'activate', label: 'Activate', icon: 'check_circle', visible: row => !Boolean(row['active']) },
+    { key: 'deactivate', label: 'Deactivate', icon: 'block', visible: row => Boolean(row['active']) },
+    { key: 'delete', label: 'Delete', icon: 'delete', danger: true }
   ];
-  readonly users: UserRow[] = [
-    ['Aisha Khan','aisha.khan@stackportal.io','aisha.khan','Engineering','Admin','United States','Active','2026-01-08'],['Daniel Brooks','daniel.brooks@stackportal.io','dbrooks','Engineering','Manager','Canada','Active','2026-01-12'],['Maya Patel','maya.patel@stackportal.io','maya.p','Marketing','User','India','Pending','2026-01-18'],['Noah Williams','noah.williams@stackportal.io','nwilliams','Finance','Manager','United Kingdom','Active','2026-02-02'],['Sofia Martinez','sofia.martinez@stackportal.io','smartinez','HR','User','Spain','Inactive','2026-02-11'],['Ethan Chen','ethan.chen@stackportal.io','echen','Engineering','User','Singapore','Active','2026-02-19'],['Olivia Brown','olivia.brown@stackportal.io','obrown','Marketing','Manager','Australia','Active','2026-03-01'],['Liam Johnson','liam.johnson@stackportal.io','ljohnson','Finance','User','United States','Suspended','2026-03-08'],['Emma Davis','emma.davis@stackportal.io','edavis','HR','Admin','Canada','Active','2026-03-14'],['James Wilson','james.wilson@stackportal.io','jwilson','Engineering','User','Germany','Pending','2026-03-21'],['Isabella Moore','isabella.moore@stackportal.io','imoore','Marketing','User','Italy','Active','2026-04-03'],['Benjamin Lee','benjamin.lee@stackportal.io','blee','Finance','Manager','South Korea','Active','2026-04-10'],['Charlotte Taylor','charlotte.taylor@stackportal.io','ctaylor','HR','User','France','Inactive','2026-04-17'],['Henry Anderson','henry.anderson@stackportal.io','handerson','Engineering','User','United States','Active','2026-04-23'],['Amelia Thomas','amelia.thomas@stackportal.io','athomas','Marketing','Admin','Brazil','Active','2026-05-02'],['Lucas Martin','lucas.martin@stackportal.io','lmartin','Finance','User','Mexico','Pending','2026-05-09'],['Harper Clark','harper.clark@stackportal.io','hclark','HR','Manager','Ireland','Active','2026-05-16'],['Alexander Lewis','alexander.lewis@stackportal.io','alewis','Engineering','User','Japan','Suspended','2026-05-23'],['Evelyn Walker','evelyn.walker@stackportal.io','ewalker','Marketing','User','New Zealand','Active','2026-06-02'],['Michael Hall','michael.hall@stackportal.io','mhall','Finance','Manager','United States','Active','2026-06-11']
-  ].map(([name, email, username, department, role, country, status, createdDate], index) => ({ id: index + 1, name, email, username, department, role, country, status, createdDate, avatar: null }));
+  filters: DataTableFilter[] = [
+    { key: 'active', label: 'Status', options: [{ label: 'Active', value: 'true' }, { label: 'Inactive', value: 'false' }] },
+    { key: 'emailVerified', label: 'Email Verification', options: [{ label: 'Verified', value: 'true' }, { label: 'Unverified', value: 'false' }] }
+  ];
 
-  onCreate(): void {}
-  onDeleteSelected(_rows: Record<string, unknown>[]): void {}
-  onView(_row: Record<string, unknown>): void {}
-  onEdit(_row: Record<string, unknown>): void {}
-  onDelete(_row: Record<string, unknown>): void {}
+  rows: UserRow[] = [];
+  loading = false;
+  error: string | null = null;
+  viewingUser: UserDto | null = null;
+  page = 0;
+  pageSize = 10;
+  totalElements = 0;
+  totalPages = 0;
+  first = true;
+  last = true;
+  search = '';
+  sortBy = 'createdAt';
+  sortDir: 'asc' | 'desc' = 'desc';
+  active?: boolean;
+  emailVerified?: boolean;
+
+  private readonly searchChanges = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(private usersService: UsersService, private router: Router, private toast: ToastService) {}
+
+  ngOnInit(): void {
+    this.searchChanges.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(search => {
+      this.search = search;
+      this.page = 0;
+      this.loadUsers();
+    });
+    this.loadUsers();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadUsers(): void {
+    this.loading = true;
+    this.error = null;
+    this.usersService.list({ page: this.page, size: this.pageSize, search: this.search, sortBy: this.sortBy, sortDir: this.sortDir, active: this.active, emailVerified: this.emailVerified })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          const result: PageResponse<UserDto> = response.data;
+          this.rows = result.content as UserRow[];
+          this.page = result.number ?? this.page;
+          this.pageSize = result.size;
+          this.totalElements = result.totalElements;
+          this.totalPages = result.totalPages;
+          this.first = result.first;
+          this.last = result.last;
+          this.loading = false;
+        },
+        error: error => {
+          this.rows = [];
+          this.loading = false;
+          this.error = error.error?.message || 'Unable to load users.';
+        }
+      });
+  }
+
+  onSearchChange(search: string): void { this.searchChanges.next(search.trim()); }
+  onPageChange(page: number): void { this.page = page; this.loadUsers(); }
+  onPageSizeChange(size: number): void { this.pageSize = size; this.page = 0; this.loadUsers(); }
+  onSortChange(sort: DataTableSortChange): void { this.sortBy = sort.sortBy; this.sortDir = sort.sortDir; this.page = 0; this.loadUsers(); }
+
+  onFilterChange(change: DataTableFilterChange): void {
+    const selected = change.value || undefined;
+    if (change.key === 'active') this.active = selected === undefined ? undefined : selected === 'true';
+    if (change.key === 'emailVerified') this.emailVerified = selected === undefined ? undefined : selected === 'true';
+    this.filters = this.filters.map(filter => filter.key === change.key ? { ...filter, selected: change.value } : filter);
+    this.page = 0;
+    this.loadUsers();
+  }
+
+  onCreate(): void { this.router.navigate(['/admin/create']); }
+
+  onAction(event: DataTableActionEvent): void {
+    const id = Number(event.row['id']);
+    if (!Number.isFinite(id)) return;
+
+    if (event.key === 'view') {
+      this.usersService.get(id).pipe(takeUntil(this.destroy$)).subscribe({
+        next: response => this.viewingUser = response.data,
+        error: error => this.toast.error(error.error?.message || 'Unable to load user details.')
+      });
+      return;
+    }
+    if (event.key === 'edit') {
+      this.router.navigate(['/admin/edit', id]);
+      return;
+    }
+    if (event.key === 'delete') {
+      if (window.confirm('Delete this user?')) this.deleteUsers([id]);
+      return;
+    }
+
+    const active = event.key === 'activate';
+    if (window.confirm(`${active ? 'Activate' : 'Deactivate'} this user?`)) {
+      this.usersService.setActive(id, active).pipe(takeUntil(this.destroy$)).subscribe({
+        next: response => { this.toast.success(response.message); this.loadUsers(); },
+        error: error => this.toast.error(error.error?.message || 'Unable to update user status.')
+      });
+    }
+  }
+
+  onBulkDelete(rows: Record<string, unknown>[]): void {
+    const ids = rows.map(row => Number(row['id'])).filter(Number.isFinite);
+    if (ids.length && window.confirm(`Delete ${ids.length} selected user(s)?`)) this.deleteUsers(ids);
+  }
+
+  closeView(): void { this.viewingUser = null; }
+
+  private deleteUsers(ids: number[]): void {
+    forkJoin(ids.map(id => this.usersService.delete(id))).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.toast.success(ids.length === 1 ? 'User deleted.' : 'Users deleted.');
+        if (this.rows.length === ids.length && this.page > 0) this.page--;
+        this.loadUsers();
+      },
+      error: error => {
+        this.toast.error(error.error?.message || 'Unable to delete user.');
+        this.loadUsers();
+      }
+    });
+  }
 }

@@ -44,5 +44,19 @@ public class EmailService {
         message.setText("Your account has been " + status + ".");
         mailSender.send(message);
     }
+
+    public void sendNewUserCredentials(String to, String name, String username, String temporaryPassword, String loginUrl) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setFrom(from);
+        message.setSubject("Your Stack Portal account");
+        message.setText("Hello " + name + ",\n\n"
+                + "Your Stack Portal account has been created.\n"
+                + "Username: " + username + "\n"
+                + "Email: " + to + "\n"
+                + "Temporary password: " + temporaryPassword + "\n\n"
+                + "Sign in at: " + loginUrl);
+        mailSender.send(message);
+    }
 }
 

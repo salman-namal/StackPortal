@@ -29,7 +29,17 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(allowedMethods);
-        config.setAllowedHeaders(allowedHeaders);
+
+        // Ensure tenant headers are allowed
+        java.util.List<String> headers = new java.util.ArrayList<>(allowedHeaders != null ? allowedHeaders : java.util.List.of());
+        if (!headers.stream().map(String::toLowerCase).toList().contains("x-tenant-id")) {
+            headers.add("X-Tenant-ID");
+        }
+        if (!headers.stream().map(String::toLowerCase).toList().contains("x-tenant-code")) {
+            headers.add("X-Tenant-Code");
+        }
+        config.setAllowedHeaders(headers);
+
         config.setAllowCredentials(allowCredentials);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

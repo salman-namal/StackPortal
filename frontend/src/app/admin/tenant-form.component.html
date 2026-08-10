@@ -1,0 +1,40 @@
+<main class="tenant-form-page">
+  <header>
+    <div>
+      <p>TENANT MANAGEMENT</p>
+      <h1>{{ isEdit ? 'Edit Tenant' : 'Create Tenant' }}</h1>
+      <span>{{ isEdit ? 'Update tenant settings and contact information.' : 'Create a new tenant for your workspace.' }}</span>
+    </div>
+  </header>
+
+  <section class="card">
+    <form (ngSubmit)="submit()" [formGroup]="form">
+      <div class="row">
+        <label>Tenant name<input formControlName="name" required /></label>
+        <label>Code<input formControlName="code" required /></label>
+      </div>
+      <div class="row">
+        <label>Email<input formControlName="email" type="email" /></label>
+        <label>Website<input formControlName="website" /></label>
+      </div>
+      <div class="row">
+        <label>Phone<input formControlName="phone" /></label>
+        <label>City<input formControlName="city" /></label>
+      </div>
+      <div class="row">
+        <label>Country<input formControlName="country" /></label>
+        <label>Logo URL<input formControlName="logoUrl" /></label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" formControlName="active" /> Active</label>
+      </div>
+
+      <div class="actions">
+        <button type="button" (click)="cancel()">Cancel</button>
+        <button type="submit">{{ isEdit ? 'Save' : 'Create' }}</button>
+      </div>
+
+      <div *ngIf="error" class="error">{{ error }}</div>
+    </form>
+  </section>
+</main>

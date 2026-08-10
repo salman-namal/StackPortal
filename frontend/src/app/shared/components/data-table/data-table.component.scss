@@ -19,7 +19,9 @@ th { color: var(--dashboard-muted, var(--auth-muted)); font-size: 11px; font-wei
 th.sortable { cursor: pointer; user-select: none; } th.sortable:hover { color: #60a5fa; }
 .check-cell { width: 46px; padding-right: 0; } input[type=checkbox] { width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; }
 tbody tr { transition: background .18s ease; } tbody tr:hover, tbody tr.selected { background: var(--dashboard-hover, rgba(37, 99, 235, .07)); }
-.person { display: flex; align-items: center; gap: 9px; font-weight: 600; }.avatar-fallback { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; font-size: 10px; }
+.person { display: flex; align-items: center; gap: 9px; font-weight: 600; }
+.avatar-img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; display: inline-block; }
+.avatar-fallback { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; font-size: 10px; }
 .badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }.badge-active, .badge-verified { background: rgba(34, 197, 94, .15); color: #22c55e; }.badge-inactive, .badge-unverified { background: rgba(148, 163, 184, .15); color: var(--dashboard-muted, var(--auth-muted)); }
 .actions { display: flex; gap: 5px; }.actions button { display: inline-grid; place-items: center; min-width: 30px; min-height: 30px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--dashboard-muted, var(--auth-muted)); cursor: pointer; }.actions button:hover { background: var(--dashboard-hover, rgba(37, 99, 235, .07)); color: #60a5fa; }.actions .delete-action:hover { color: #f87171; background: rgba(239, 68, 68, .1); }
 .state, .error-state { padding: 42px; text-align: center; color: var(--dashboard-muted, var(--auth-muted)); }.error-state { display: flex; align-items: center; justify-content: center; gap: 12px; color: #f87171; }.error-state button { padding: 0 10px; }

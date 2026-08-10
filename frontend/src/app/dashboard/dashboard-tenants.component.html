@@ -1,0 +1,66 @@
+<main class="tenants-page">
+  <header>
+    <div>
+      <p>WORKSPACE DIRECTORY</p>
+      <h1>Tenants</h1>
+      <span>Manage tenants, credentials, and workspace configurations.</span>
+    </div>
+  </header>
+
+  <app-data-table
+    [columns]="columns"
+    [rows]="rows"
+    [filters]="filters"
+    [actions]="actions"
+    [showBulkDelete]="true"
+    [loading]="loading"
+    [error]="error"
+    [page]="page"
+    [pageSize]="pageSize"
+    [totalElements]="totalElements"
+    [totalPages]="totalPages"
+    [first]="first"
+    [last]="last"
+    [searchValue]="search"
+    [sortBy]="sortBy"
+    [sortDir]="sortDir"
+    entityName="tenants"
+    createButtonText="Create Tenant"
+    (searchChange)="onSearchChange($event)"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+    (sortChange)="onSortChange($event)"
+    (filterChange)="onFilterChange($event)"
+    (create)="onCreate()"
+    (action)="onAction($event)"
+    (bulkDelete)="onBulkDelete($event)"
+    (refresh)="loadTenants()"
+  />
+</main>
+
+<div *ngIf="viewingTenant" class="tenant-dialog-backdrop" (click)="closeView()">
+  <section class="tenant-dialog" role="dialog" aria-modal="true" aria-labelledby="tenant-details-title" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <p>TENANT DETAILS</p>
+        <h2 id="tenant-details-title">{{ viewingTenant.name }}</h2>
+      </div>
+      <button type="button" aria-label="Close tenant details" (click)="closeView()"><span class="material-symbols-outlined">close</span></button>
+    </header>
+
+    <dl>
+      <div><dt>Code</dt><dd>{{ viewingTenant.code }}</dd></div>
+      <div><dt>Email</dt><dd>{{ viewingTenant.email }}</dd></div>
+      <div><dt>Website</dt><dd>{{ viewingTenant.website }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ viewingTenant.phone }}</dd></div>
+      <div><dt>City</dt><dd>{{ viewingTenant.city }}</dd></div>
+      <div><dt>Country</dt><dd>{{ viewingTenant.country }}</dd></div>
+      <div><dt>Status</dt><dd [class.active]="viewingTenant.active">{{ viewingTenant.active ? 'Active' : 'Inactive' }}</dd></div>
+      <div><dt>Created</dt><dd>{{ viewingTenant.createdAt | date:'medium' }}</dd></div>
+    </dl>
+
+    <footer>
+      <button type="button" (click)="closeView()">Close</button>
+    </footer>
+  </section>
+</div>

@@ -11,8 +11,6 @@ import org.springframework.stereotype.Service;
 import java.security.Key;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 import java.util.function.Function;
@@ -56,6 +54,17 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long getTenantIdFromToken(String token) {
+        Object tenantIdClaim = extractClaim(token, claims -> claims.get("tenantId"));
+        if (tenantIdClaim instanceof Number number) {
+            return number.longValue();
+        }
+        if (tenantIdClaim instanceof String tenantIdValue && !tenantIdValue.isBlank()) {
+            return Long.valueOf(tenantIdValue);
+        }
+        return null;
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -84,11 +93,6 @@ public class JwtService {
 
     private Key getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
-
-
-        // Optional: print the key in readable format for debugging
-        System.out.println("Key bytes: " + Arrays.toString(keyBytes));
-        System.out.println("Key Base64: " + Base64.getEncoder().encodeToString(keyBytes));
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

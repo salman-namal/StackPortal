@@ -1,5 +1,6 @@
 package com.stackportal.security;
 
+import com.stackportal.tenant.context.TenantContext;
 import com.stackportal.user.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,6 +44,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String username = jwtService.extractUsername(jwt);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            Long tenantId = jwtService.getTenantIdFromToken(jwt);
+            if (tenantId == null) {
+                writeError(response, HttpStatus.UNAUTHORIZED, "Invalid JWT tenant claim");
+                return;
+            }
+
+            String clientTenantHeader = request.getHeader("X-Tenant-ID");
+            if (clientTenantHeader == null || clientTenantHeader.isBlank()) {
+                clientTenantHeader = request.getHeader("x-tenant-id");
+            }
+            if (clientTenantHeader != null && !clientTenantHeader.isBlank() && !clientTenantHeader.trim().equals(String.valueOf(tenantId))) {
+                writeError(response, HttpStatus.FORBIDDEN, "Tenant mismatch");
+                return;
+            }
+
+            Long resolvedTenantId = TenantContext.getTenantId();
+            if (resolvedTenantId != null && !resolvedTenantId.equals(tenantId)) {
+                writeError(response, HttpStatus.FORBIDDEN, "Tenant mismatch");
+                return;
+            }
+
+            TenantContext.setTenantId(tenantId);
+
             UserDetails userDetails = userService.loadUserByUsername(username);
             if (userDetails.isEnabled() && jwtService.isTokenValid(jwt, userDetails.getUsername())) {
                 UsernamePasswordAuthenticationToken authToken =
@@ -52,6 +77,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeError(HttpServletResponse response, HttpStatus status, String message) throws IOException {
+        response.setStatus(status.value());
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"success\":false,\"message\":\"" + message.replace("\\", "\\\\").replace("\"", "\\\"") + "\",\"data\":null}");
     }
 }
 

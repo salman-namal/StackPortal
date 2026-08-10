@@ -12,6 +12,9 @@ const requiredKeys = [
   'ENVIRONMENT_NAME',
   'ENABLE_GOOGLE_SIGN_IN'
 ];
+// Optional tenant configuration keys (provide one if the frontend should target a specific tenant):
+// TENANT_ID (numeric) or TENANT_CODE (string)
+const optionalKeys = ['TENANT_ID', 'TENANT_CODE'];
 
 if (!fs.existsSync(envPath)) {
   throw new Error('Missing frontend/.env. Copy .env.example to .env and provide the runtime configuration.');
@@ -38,6 +41,14 @@ const runtimeConfig = {
   environmentName: values.ENVIRONMENT_NAME,
   enableGoogleSignIn: values.ENABLE_GOOGLE_SIGN_IN.toLowerCase() === 'true'
 };
+
+// Add optional tenant config if provided.
+if (values.TENANT_ID) {
+  runtimeConfig.tenantId = Number(values.TENANT_ID);
+}
+if (values.TENANT_CODE) {
+  runtimeConfig.tenantCode = values.TENANT_CODE;
+}
 
 fs.writeFileSync(
   outputPath,

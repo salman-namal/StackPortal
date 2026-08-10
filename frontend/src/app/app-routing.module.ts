@@ -23,9 +23,11 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: '', component: DashboardOverviewComponent, pathMatch: 'full' },
-      { path: 'users', loadComponent: () => import('./dashboard/users/dashboard-users.component').then((m) => m.DashboardUsersComponent) }
+      { path: 'users', loadComponent: () => import('./dashboard/users/dashboard-users.component').then((m) => m.DashboardUsersComponent) },
+      { path: 'tenants', loadComponent: () => import('./dashboard/dashboard-tenants.component').then((m) => m.DashboardTenantsComponent) }
     ]
   },
+
   {
     path: 'upcoming/:feature',
     loadComponent: () => import('./shared/components/upcoming/upcoming.component').then((m) => m.UpcomingComponent),

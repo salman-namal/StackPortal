@@ -4,6 +4,7 @@ import com.stackportal.auth.dto.*;
 import com.stackportal.common.ApiResponse;
 import com.stackportal.exception.ApiException;
 import com.stackportal.security.JwtService;
+import com.stackportal.tenant.context.TenantContext;
 import com.stackportal.token.*;
 import com.stackportal.user.*;
 import jakarta.transaction.Transactional;
@@ -41,6 +42,7 @@ public class AuthService {
 
     @Transactional
     public ApiResponse<Void> register(RegisterRequest request, String appBaseUrl) {
+        requireTenantId();
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new ApiException("Username is already taken.", HttpStatus.BAD_REQUEST);
         }
@@ -79,23 +81,27 @@ public class AuthService {
     }
 
     public ApiResponse<LoginResponse> login(LoginRequest request) {
-        User user = userRepository.findByEmailOrUsername(request.getEmail(), request.getEmail())
-                .orElseThrow(() -> new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED));
+            Long tenantId = requireTenantId();
+            org.slf4j.LoggerFactory.getLogger(AuthService.class)
+                    .debug("AuthService.login: tenantId={}, email={}", tenantId, request.getEmail());
 
-        if (!user.isActive()) {
-            throw new ApiException("Your account has been deactivated. Please contact your administrator.", HttpStatus.FORBIDDEN);
+            User user = userRepository.findByEmailOrUsername(request.getEmail(), request.getEmail())
+                    .orElseThrow(() -> new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED));
+
+            if (!user.isActive()) {
+                throw new ApiException("Your account has been deactivated. Please contact your administrator.", HttpStatus.FORBIDDEN);
+            }
+
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+
+            if (!user.isEnabled()) {
+                throw new ApiException("Account is not active or email not verified", HttpStatus.FORBIDDEN);
+            }
+
+            return buildLoginResponse(user);
         }
-
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-
-        if (!user.isEnabled()) {
-            throw new ApiException("Account is not active or email not verified", HttpStatus.FORBIDDEN);
-        }
-
-        return buildLoginResponse(user);
-    }
 
     public ApiResponse<AuthResponse> refreshToken(String refreshToken) {
         RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
@@ -214,6 +220,7 @@ public class AuthService {
 
     @Transactional
     public ApiResponse<LoginResponse> loginWithGoogle(GoogleLoginRequest request) {
+        requireTenantId();
         GoogleUserInfo googleUser = googleOAuth2Service.verifyIdToken(request.getIdToken());
         if (googleUser == null || googleUser.getEmail() == null) {
             throw new ApiException("Invalid Google token", HttpStatus.UNAUTHORIZED);
@@ -247,12 +254,17 @@ public class AuthService {
     }
 
     private ApiResponse<AuthResponse> buildAuthResponse(User user) {
+        Long tenantId = requireTenantId();
+
         Map<String, Object> claims = new HashMap<>();
         Set<String> roles = user.getRoles()
                 .stream()
                 .map(r -> r.getRoleName().name())
                 .collect(Collectors.toSet());
         claims.put("roles", roles);
+        claims.put("tenantId", tenantId);
+        claims.put("userId", user.getId());
+        claims.put("role", roles.stream().findFirst().orElse("USER"));
 
         String accessToken = jwtService.generateAccessToken(user.getEmail(), claims);
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
@@ -302,6 +314,14 @@ public class AuthService {
                 .build();
 
         return ApiResponse.ok(authResponse.getMessage(), loginResponse);
+    }
+
+    private Long requireTenantId() {
+        Long tenantId = TenantContext.getTenantId();
+        if (tenantId == null) {
+            throw new ApiException("Tenant could not be resolved from the request host.", HttpStatus.BAD_REQUEST);
+        }
+        return tenantId;
     }
 
     private String generateOtp() {

@@ -1,0 +1,15 @@
+.tenants-page { max-width: 1540px; margin: 0 auto; padding: 32px 34px; }
+.tenants-page header { display: flex; justify-content: space-between; margin-bottom: 24px; }
+.tenants-page p, .tenant-dialog p { margin: 0 0 7px; color: #60a5fa; font-size: 11px; font-weight: 800; letter-spacing: .11em; }
+.tenants-page h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.03em; }
+.tenants-page header span { color: var(--dashboard-muted, var(--auth-muted)); font-size: 14px; }
+
+@media (max-width: 700px) { .tenants-page { padding: 24px 18px; }.tenants-page h1 { font-size: 24px; } }
+
+.tenant-dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(2,6,23,0.45); z-index: 60; }
+.tenant-dialog { background: var(--dashboard-surface, var(--auth-card)); width: 640px; max-width: calc(100% - 48px); border-radius: 12px; box-shadow: 0 12px 34px rgba(2,6,23,0.25); padding: 18px; }
+.tenant-dialog header { display: flex; justify-content: space-between; align-items: center; }
+.tenant-dialog dl { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; margin: 18px 0; }
+.tenant-dialog dt { color: var(--dashboard-muted, var(--auth-muted)); font-size: 12px; }
+.tenant-dialog dd { margin: 0; font-weight: 700; }
+.tenant-dialog footer { display: flex; justify-content: flex-end; }

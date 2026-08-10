@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom, Observable, tap } from 'rxjs';
 import { appConfig } from '../config/app-config';
 
@@ -73,7 +73,7 @@ export class AuthService {
 
   login(email: string, password: string): Observable<LoginResponse> {
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password })
+      .post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password }, { headers: this.buildAuthHeaders() })
       .pipe(tap(res => this.handleLoginSuccess(res)));
   }
 
@@ -83,19 +83,19 @@ export class AuthService {
       username,
       email,
       password
-    });
+    }, { headers: this.buildAuthHeaders() });
   }
 
   verifyEmail(token: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/verify-email`, { token });
+    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/verify-email`, { token }, { headers: this.buildAuthHeaders() });
   }
 
   resendVerification(email: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/resend-verification`, { email });
+    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/resend-verification`, { email }, { headers: this.buildAuthHeaders() });
   }
 
   forgotPassword(email: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/forgot-password`, { email });
+    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/forgot-password`, { email }, { headers: this.buildAuthHeaders() });
   }
 
   resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<ApiResponse<void>> {
@@ -103,12 +103,12 @@ export class AuthService {
       token,
       newPassword,
       confirmPassword
-    });
+    }, { headers: this.buildAuthHeaders() });
   }
 
   googleLogin(idToken: string): Observable<LoginResponse> {
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/auth/google`, { idToken })
+      .post<LoginResponse>(`${this.apiUrl}/auth/google`, { idToken }, { headers: this.buildAuthHeaders() })
       .pipe(tap(res => this.handleLoginSuccess(res)));
   }
 
@@ -122,8 +122,40 @@ export class AuthService {
     this.clearAuth();
     return this.http.post<ApiResponse<void>>(
       `${this.apiUrl}/auth/logout?refreshToken=${encodeURIComponent(refreshToken ?? '')}`,
-      {}
+      {},
+      { headers: this.buildAuthHeaders() }
     );
+  }
+
+  private buildAuthHeaders(): HttpHeaders {
+    const headers = new HttpHeaders();
+    const tenantCode = this.resolveTenantCodeFromCurrentHost();
+    return tenantCode ? headers.set('X-Tenant-Code', tenantCode) : headers;
+  }
+
+  private resolveTenantCodeFromCurrentHost(): string | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const hostname = window.location.hostname.toLowerCase();
+    if (!this.isLocalDevelopmentHost(hostname)) {
+      return null;
+    }
+
+    const localhostMatch = hostname.match(/^([a-z0-9-]+)\.localhost$/i);
+    if (localhostMatch?.[1]) {
+      return localhostMatch[1];
+    }
+
+    return (appConfig as { tenantCode?: string }).tenantCode || null;
+  }
+
+  private isLocalDevelopmentHost(hostname: string): boolean {
+    return hostname === 'localhost'
+      || hostname.endsWith('.localhost')
+      || hostname === '127.0.0.1'
+      || hostname === '0.0.0.0';
   }
 
   getAccessToken(): string | null {

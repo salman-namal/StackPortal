@@ -2,31 +2,21 @@ spring:
   config:
     # Supports running from either the backend directory or the repository root.
     import: optional:file:.env[.properties],optional:file:backend/.env[.properties]
+
   application:
     name: ${SPRING_APPLICATION_NAME}
-  datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
-    driver-class-name: ${DATABASE_DRIVER_CLASS_NAME}
-    hikari:
-      maximum-pool-size: ${DB_MAXIMUM_POOL_SIZE}
-      minimum-idle: ${DB_MINIMUM_IDLE}
-      idle-timeout: ${DB_IDLE_TIMEOUT}
-      connection-timeout: ${DB_CONNECTION_TIMEOUT}
-      max-lifetime: ${DB_MAX_LIFETIME}
+
+  # JPA — the primary DataSource is provided by DataSourceConfig (@Primary bean).
+  # Spring Boot JPA auto-configuration picks it up automatically.
   jpa:
+    open-in-view: false
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO}
-    properties:
-      hibernate:
-        dialect: ${JPA_HIBERNATE_DIALECT}
-    show-sql: ${JPA_SHOW_SQL}
+      ddl-auto: update
+    show-sql: false
+
   flyway:
-    enabled: ${FLYWAY_ENABLED}
-    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE}
-    baseline-version: ${FLYWAY_BASELINE_VERSION}
-    locations: ${FLYWAY_LOCATIONS}
+    enabled: false
+
   mail:
     host: ${MAIL_HOST}
     port: ${MAIL_PORT}
@@ -51,6 +41,22 @@ google:
 app:
   frontend-url: ${FRONTEND_URL}
   backend-url: ${BACKEND_URL}
+
+  # Master database — shared infrastructure (tenants, users, roles, tokens).
+  # Individual tenant databases are stored in the tenants table and managed
+  # dynamically by TenantDataSourceManager.
+  datasource:
+    master:
+      url: ${MASTER_DATABASE_URL}
+      username: ${MASTER_DATABASE_USERNAME}
+      password: ${MASTER_DATABASE_PASSWORD}
+      driver-class-name: ${MASTER_DATABASE_DRIVER_CLASS_NAME}
+      maximum-pool-size: ${DB_MAXIMUM_POOL_SIZE:20}
+      minimum-idle: ${DB_MINIMUM_IDLE:5}
+      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
     allowed-methods: ${CORS_ALLOWED_METHODS}

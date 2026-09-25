@@ -1,9 +1,9 @@
-CREATE TABLE roles (
-    id BIGSERIAL PRIMARY KEY,
-    role_name VARCHAR(50) NOT NULL UNIQUE
-);
+CREATE TABLE IF NOT EXISTS roles (
+                                     id BIGSERIAL PRIMARY KEY,
+                                     role_name VARCHAR(50) NOT NULL UNIQUE
+    );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
@@ -14,7 +14,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP
 );
 
-CREATE TABLE user_roles (
+CREATE TABLE IF NOT EXISTS user_roles (
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
     PRIMARY KEY (user_id, role_id),
@@ -22,7 +22,7 @@ CREATE TABLE user_roles (
     CONSTRAINT fk_user_roles_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
-CREATE TABLE password_reset_tokens (
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id BIGSERIAL PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
     user_id BIGINT NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE password_reset_tokens (
     CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE email_verification_tokens (
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
     id BIGSERIAL PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
     user_id BIGINT NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE email_verification_tokens (
     CONSTRAINT fk_email_verification_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id BIGSERIAL PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
     user_id BIGINT NOT NULL,
@@ -49,5 +49,18 @@ CREATE TABLE refresh_tokens (
     CONSTRAINT fk_refresh_token_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-INSERT INTO roles (role_name) VALUES ('SUPER_ADMIN'), ('ADMIN'), ('MANAGER'), ('USER');
+INSERT INTO roles (role_name)
+SELECT role_name
+FROM (
+         VALUES
+             ('SUPER_ADMIN'),
+             ('ADMIN'),
+             ('MANAGER'),
+             ('USER')
+     ) AS new_roles(role_name)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM roles r
+    WHERE r.role_name = new_roles.role_name
+);
 

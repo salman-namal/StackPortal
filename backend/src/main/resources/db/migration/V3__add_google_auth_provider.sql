@@ -1,30 +1,27 @@
-ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+-- V3__add_oauth_provider_to_users.sql
 
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'users' AND column_name = 'provider'
-    ) THEN
-        ALTER TABLE users ADD COLUMN provider VARCHAR(20) DEFAULT 'LOCAL';
-    END IF;
+-- 1. Allow password to be NULL
+--    Required for OAuth/social-login users who do not have a local password.
+ALTER TABLE public.users
+    ALTER COLUMN password DROP NOT NULL;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'users' AND column_name = 'provider_id'
-    ) THEN
-        ALTER TABLE users ADD COLUMN provider_id VARCHAR(255);
-    END IF;
-END $$;
+-- 2. Add provider column if it does not already exist
+ALTER TABLE public.users
+    ADD COLUMN IF NOT EXISTS provider VARCHAR(20) DEFAULT 'LOCAL';
 
-UPDATE users SET provider = 'LOCAL' WHERE provider IS NULL;
-ALTER TABLE users ALTER COLUMN provider SET NOT NULL;
+-- 3. Add provider_id column if it does not already exist
+ALTER TABLE public.users
+    ADD COLUMN IF NOT EXISTS provider_id VARCHAR(255);
 
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'uk_users_provider_id'
-    ) THEN
-        ALTER TABLE users ADD CONSTRAINT uk_users_provider_id UNIQUE (provider_id);
-    END IF;
-END $$;
+-- 4. Set LOCAL provider for existing users
+UPDATE public.users
+SET provider = 'LOCAL'
+WHERE provider IS NULL;
+
+-- 5. Make provider mandatory
+ALTER TABLE public.users
+    ALTER COLUMN provider SET NOT NULL;
+
+-- 6. Create unique index for provider_id if it does not already exist
+CREATE UNIQUE INDEX IF NOT EXISTS uk_users_provider_id
+    ON public.users (provider_id);

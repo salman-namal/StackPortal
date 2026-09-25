@@ -1,3 +1,4 @@
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom, Observable, tap } from 'rxjs';
@@ -8,7 +9,10 @@ declare global {
     google?: {
       accounts: {
         id: {
-          initialize(configuration: { client_id: string; callback: (response: { credential?: string }) => void }): void;
+          initialize(configuration: {
+            client_id: string;
+            callback: (response: { credential?: string }) => void;
+          }): void;
           prompt(callback: (notification: {
             isNotDisplayed(): boolean;
             isSkippedMoment(): boolean;
@@ -73,43 +77,96 @@ export class AuthService {
 
   login(email: string, password: string): Observable<LoginResponse> {
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password }, { headers: this.buildAuthHeaders() })
-      .pipe(tap(res => this.handleLoginSuccess(res)));
+      .post<LoginResponse>(
+        `${this.apiUrl}/auth/login`,
+        { email, password },
+        { headers: this.buildAuthHeaders() }
+      )
+      .pipe(
+        tap(res => this.handleLoginSuccess(res))
+      );
   }
 
-  register(name: string, username: string, email: string, password: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/register`, {
-      name,
-      username,
-      email,
-      password
-    }, { headers: this.buildAuthHeaders() });
+  register(
+    name: string,
+    username: string,
+    email: string,
+    password: string
+  ): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/auth/register`,
+      {
+        name,
+        username,
+        email,
+        password
+      },
+      {
+        headers: this.buildAuthHeaders()
+      }
+    );
   }
 
   verifyEmail(token: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/verify-email`, { token }, { headers: this.buildAuthHeaders() });
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/auth/verify-email`,
+      { token },
+      {
+        headers: this.buildAuthHeaders()
+      }
+    );
   }
 
   resendVerification(email: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/resend-verification`, { email }, { headers: this.buildAuthHeaders() });
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/auth/resend-verification`,
+      { email },
+      {
+        headers: this.buildAuthHeaders()
+      }
+    );
   }
 
   forgotPassword(email: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/forgot-password`, { email }, { headers: this.buildAuthHeaders() });
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/auth/forgot-password`,
+      { email },
+      {
+        headers: this.buildAuthHeaders()
+      }
+    );
   }
 
-  resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(`${this.apiUrl}/auth/reset-password`, {
-      token,
-      newPassword,
-      confirmPassword
-    }, { headers: this.buildAuthHeaders() });
+  resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(
+      `${this.apiUrl}/auth/reset-password`,
+      {
+        token,
+        newPassword,
+        confirmPassword
+      },
+      {
+        headers: this.buildAuthHeaders()
+      }
+    );
   }
 
   googleLogin(idToken: string): Observable<LoginResponse> {
     return this.http
-      .post<LoginResponse>(`${this.apiUrl}/auth/google`, { idToken }, { headers: this.buildAuthHeaders() })
-      .pipe(tap(res => this.handleLoginSuccess(res)));
+      .post<LoginResponse>(
+        `${this.apiUrl}/auth/google`,
+        { idToken },
+        {
+          headers: this.buildAuthHeaders()
+        }
+      )
+      .pipe(
+        tap(res => this.handleLoginSuccess(res))
+      );
   }
 
   async signInWithGoogle(): Promise<LoginResponse> {
@@ -119,43 +176,91 @@ export class AuthService {
 
   logout(): Observable<ApiResponse<void>> {
     const refreshToken = this.getRefreshToken();
+
     this.clearAuth();
+
     return this.http.post<ApiResponse<void>>(
-      `${this.apiUrl}/auth/logout?refreshToken=${encodeURIComponent(refreshToken ?? '')}`,
+      `${this.apiUrl}/auth/logout?refreshToken=${encodeURIComponent(
+        refreshToken ?? ''
+      )}`,
       {},
-      { headers: this.buildAuthHeaders() }
+      {
+        headers: this.buildAuthHeaders()
+      }
     );
   }
 
+  /**
+   * Builds the headers required by the backend.
+   *
+   * The backend TenantResolutionFilter requires:
+   *
+   * X-Tenant-Code: stack
+   *
+   * for local development.
+   */
   private buildAuthHeaders(): HttpHeaders {
-    const headers = new HttpHeaders();
-    const tenantCode = this.resolveTenantCodeFromCurrentHost();
-    return tenantCode ? headers.set('X-Tenant-Code', tenantCode) : headers;
+    let headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+
+    const tenantCode = this.resolveTenantCode();
+
+    if (tenantCode) {
+      headers = headers.set('X-Tenant-Code', tenantCode);
+    }
+
+    return headers;
   }
 
-  private resolveTenantCodeFromCurrentHost(): string | null {
+  /**
+   * Resolve the tenant code for the current frontend.
+   *
+   * Supported local development URLs:
+   *
+   * http://localhost:4200
+   *     -> stack
+   *
+   * http://stack.localhost:4200
+   *     -> stack
+   *
+   * The appConfig.tenantCode can override the default local tenant.
+   */
+  private resolveTenantCode(): string | null {
     if (typeof window === 'undefined') {
       return null;
     }
 
     const hostname = window.location.hostname.toLowerCase();
-    if (!this.isLocalDevelopmentHost(hostname)) {
-      return null;
+
+    // Example:
+    // stack.localhost -> stack
+    if (hostname.endsWith('.localhost')) {
+      const tenantCode = hostname.split('.')[0];
+
+      if (tenantCode) {
+        return tenantCode;
+      }
     }
 
-    const localhostMatch = hostname.match(/^([a-z0-9-]+)\.localhost$/i);
-    if (localhostMatch?.[1]) {
-      return localhostMatch[1];
+    // Standard local development:
+    // localhost -> stack
+    // 127.0.0.1 -> stack
+    // 0.0.0.0 -> stack
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0'
+    ) {
+      const configuredTenant = (appConfig as { tenantCode?: string }).tenantCode;
+
+      return configuredTenant?.trim() || 'stack';
     }
 
-    return (appConfig as { tenantCode?: string }).tenantCode || null;
-  }
+    // For non-local environments, use configured tenant if available.
+    const configuredTenant = (appConfig as { tenantCode?: string }).tenantCode;
 
-  private isLocalDevelopmentHost(hostname: string): boolean {
-    return hostname === 'localhost'
-      || hostname.endsWith('.localhost')
-      || hostname === '127.0.0.1'
-      || hostname === '0.0.0.0';
+    return configuredTenant?.trim() || null;
   }
 
   getAccessToken(): string | null {
@@ -199,29 +304,72 @@ export class AuthService {
 
   private getStoredRoles(): string[] {
     const raw = localStorage.getItem(this.rolesKey);
-    return raw ? JSON.parse(raw) : [];
+
+    if (!raw) {
+      return [];
+    }
+
+    try {
+      return JSON.parse(raw) as string[];
+    } catch {
+      return [];
+    }
   }
 
   private handleAuthSuccess(res: AuthResponse): void {
     if (!res.success || !res.data) {
       return;
     }
-    localStorage.setItem(this.accessTokenKey, res.data.accessToken);
-    localStorage.setItem(this.refreshTokenKey, res.data.refreshToken);
-    localStorage.setItem(this.rolesKey, JSON.stringify(res.data.roles || []));
+
+    localStorage.setItem(
+      this.accessTokenKey,
+      res.data.accessToken
+    );
+
+    localStorage.setItem(
+      this.refreshTokenKey,
+      res.data.refreshToken
+    );
+
+    localStorage.setItem(
+      this.rolesKey,
+      JSON.stringify(res.data.roles || [])
+    );
+
     this.loggedIn$.next(true);
     this.roles$.next(res.data.roles || []);
   }
 
   private handleLoginSuccess(res: LoginResponse): void {
-    if (!res.success || !res.data?.accessToken || !res.data?.refreshToken || !res.data.user) {
+    if (
+      !res.success ||
+      !res.data?.accessToken ||
+      !res.data?.refreshToken ||
+      !res.data.user
+    ) {
       return;
     }
 
-    localStorage.setItem(this.accessTokenKey, res.data.accessToken);
-    localStorage.setItem(this.refreshTokenKey, res.data.refreshToken);
-    localStorage.setItem(this.userKey, JSON.stringify(res.data.user));
-    localStorage.setItem(this.rolesKey, JSON.stringify(res.data.user.roles || []));
+    localStorage.setItem(
+      this.accessTokenKey,
+      res.data.accessToken
+    );
+
+    localStorage.setItem(
+      this.refreshTokenKey,
+      res.data.refreshToken
+    );
+
+    localStorage.setItem(
+      this.userKey,
+      JSON.stringify(res.data.user)
+    );
+
+    localStorage.setItem(
+      this.rolesKey,
+      JSON.stringify(res.data.user.roles || [])
+    );
+
     this.loggedIn$.next(true);
     this.roles$.next(res.data.user.roles || []);
   }
@@ -247,12 +395,23 @@ export class AuthService {
             return;
           }
 
-          reject(new Error('Google Sign-In did not return an ID token.'));
+          reject(
+            new Error('Google Sign-In did not return an ID token.')
+          );
         }
       });
+
       window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-          reject(new Error('Google Sign-In was cancelled or unavailable.'));
+        if (
+          notification.isNotDisplayed() ||
+          notification.isSkippedMoment() ||
+          notification.isDismissedMoment()
+        ) {
+          reject(
+            new Error(
+              'Google Sign-In was cancelled or unavailable.'
+            )
+          );
         }
       });
     });
@@ -264,20 +423,47 @@ export class AuthService {
     }
 
     return new Promise<void>((resolve, reject) => {
-      const existingScript = document.getElementById('google-identity-services');
+      const existingScript = document.getElementById(
+        'google-identity-services'
+      );
+
       if (existingScript) {
-        existingScript.addEventListener('load', () => resolve(), { once: true });
-        existingScript.addEventListener('error', () => reject(new Error('Unable to load Google Sign-In.')), { once: true });
+        existingScript.addEventListener(
+          'load',
+          () => resolve(),
+          { once: true }
+        );
+
+        existingScript.addEventListener(
+          'error',
+          () =>
+            reject(
+              new Error(
+                'Unable to load Google Sign-In.'
+              )
+            ),
+          { once: true }
+        );
+
         return;
       }
 
       const script = document.createElement('script');
+
       script.id = 'google-identity-services';
       script.src = appConfig.googleIdentityServicesUrl;
       script.async = true;
       script.defer = true;
+
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Unable to load Google Sign-In.'));
+
+      script.onerror = () =>
+        reject(
+          new Error(
+            'Unable to load Google Sign-In.'
+          )
+        );
+
       document.head.appendChild(script);
     });
   }
@@ -287,6 +473,7 @@ export class AuthService {
     localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.rolesKey);
     localStorage.removeItem(this.userKey);
+
     this.loggedIn$.next(false);
     this.roles$.next([]);
   }

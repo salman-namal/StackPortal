@@ -7,7 +7,6 @@ import com.stackportal.security.JwtService;
 import com.stackportal.tenant.context.TenantContext;
 import com.stackportal.token.*;
 import com.stackportal.user.*;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -15,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -40,7 +40,7 @@ public class AuthService {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<Void> register(RegisterRequest request, String appBaseUrl) {
         requireTenantId();
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -116,7 +116,7 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<Void> logout(String refreshToken) {
         refreshTokenRepository.findByToken(refreshToken).ifPresent(token -> {
             token.setRevoked(true);
@@ -125,7 +125,7 @@ public class AuthService {
         return ApiResponse.ok("Logged out successfully", null);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<Void> verifyEmail(String tokenValue) {
         EmailVerificationToken token = emailVerificationTokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new ApiException("Invalid verification code", HttpStatus.BAD_REQUEST));
@@ -144,7 +144,7 @@ public class AuthService {
         return ApiResponse.ok("Email verified successfully", null);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<Void> resendVerification(ResendVerificationRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
@@ -169,7 +169,7 @@ public class AuthService {
         return ApiResponse.ok("A new verification code has been sent to your email.", null);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<Void> forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
@@ -191,7 +191,7 @@ public class AuthService {
         return ApiResponse.ok("A password reset link has been sent to your email.", null);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
         PasswordResetToken token = passwordResetTokenRepository.findByToken(request.getToken())
                 .orElseThrow(() -> new ApiException("Invalid password reset token", HttpStatus.BAD_REQUEST));
@@ -218,7 +218,7 @@ public class AuthService {
         return ApiResponse.ok("Password reset successfully", null);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "tenantTransactionManager")
     public ApiResponse<LoginResponse> loginWithGoogle(GoogleLoginRequest request) {
         requireTenantId();
         GoogleUserInfo googleUser = googleOAuth2Service.verifyIdToken(request.getIdToken());

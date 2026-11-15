@@ -26,6 +26,7 @@ import java.util.Locale;
 public class TenantResolutionFilter extends OncePerRequestFilter {
 
     public static final String TENANT_HEADER = "X-Tenant-Code";
+    public static final String TENANT_ID_HEADER = "X-Tenant-ID";
 
     private final TenantRepository tenantRepository;
     private final TenantDataSourceManager tenantDataSourceManager;
@@ -45,11 +46,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String tenantCode = resolveTenantCode(request);
+        Long tenantId = resolveTenantId(request);
 
         try {
             if (isTenantResolutionRequired(request)) {
 
-                if (tenantCode == null || tenantCode.isBlank()) {
+                if ((tenantCode == null || tenantCode.isBlank()) && tenantId == null) {
                     writeError(
                             response,
                             HttpStatus.BAD_REQUEST,
@@ -58,15 +60,13 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                Tenant tenant = tenantRepository
-                        .findByCode(tenantCode.toLowerCase(Locale.ROOT))
-                        .orElse(null);
+                Tenant tenant = findTenant(tenantCode, tenantId);
 
                 if (tenant == null) {
                     writeError(
                             response,
                             HttpStatus.NOT_FOUND,
-                            "Tenant '" + tenantCode + "' does not exist."
+                            "Tenant does not exist."
                     );
                     return;
                 }
@@ -99,11 +99,9 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                         request.getRequestURI()
                 );
 
-            } else if (tenantCode != null && !tenantCode.isBlank()) {
+            } else if ((tenantCode != null && !tenantCode.isBlank()) || tenantId != null) {
 
-                Tenant tenant = tenantRepository
-                        .findByCode(tenantCode.toLowerCase(Locale.ROOT))
-                        .orElse(null);
+                Tenant tenant = findTenant(tenantCode, tenantId);
 
                 if (tenant != null && tenant.getStatus() == TenantStatus.ACTIVE) {
 
@@ -140,11 +138,37 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
         );
     }
 
+    private Tenant findTenant(String tenantCode, Long tenantId) {
+        if (tenantCode != null && !tenantCode.isBlank()) {
+            return tenantRepository
+                    .findByCode(tenantCode.toLowerCase(Locale.ROOT))
+                    .orElse(null);
+        }
+
+        return tenantId == null ? null : tenantRepository.findById(tenantId).orElse(null);
+    }
+
+    private Long resolveTenantId(HttpServletRequest request) {
+        String headerValue = request.getHeader(TENANT_ID_HEADER);
+
+        if (headerValue == null || headerValue.isBlank()) {
+            return null;
+        }
+
+        try {
+            long tenantId = Long.parseLong(headerValue.trim());
+            return tenantId > 0 ? tenantId : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
     /**
      * Resolves tenant in the following order:
      *
      * 1. X-Tenant-Code header
-     * 2. Tenant subdomain
+     * 2. X-Tenant-ID header
+     * 3. Tenant subdomain
      *
      * For local development, the header is the preferred method.
      */

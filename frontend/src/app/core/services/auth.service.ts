@@ -205,9 +205,12 @@ export class AuthService {
     });
 
     const tenantCode = this.resolveTenantCode();
+    const tenantId = this.resolveTenantId();
 
     if (tenantCode) {
       headers = headers.set('X-Tenant-Code', tenantCode);
+    } else if (tenantId !== null) {
+      headers = headers.set('X-Tenant-ID', String(tenantId));
     }
 
     return headers;
@@ -261,6 +264,19 @@ export class AuthService {
     const configuredTenant = (appConfig as { tenantCode?: string }).tenantCode;
 
     return configuredTenant?.trim() || null;
+  }
+
+  /**
+   * Uses the optional numeric tenant identifier when no tenant code can be
+   * derived from the host or runtime configuration. This keeps the runtime
+   * config contract (tenantId or tenantCode) aligned with the API.
+   */
+  private resolveTenantId(): number | null {
+    const tenantId = appConfig.tenantId;
+
+    return typeof tenantId === 'number' && Number.isSafeInteger(tenantId) && tenantId > 0
+      ? tenantId
+      : null;
   }
 
   getAccessToken(): string | null {

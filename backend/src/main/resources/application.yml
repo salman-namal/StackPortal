@@ -28,6 +28,9 @@ spring:
           auth: ${MAIL_SMTP_AUTH}
           starttls:
             enable: ${MAIL_SMTP_STARTTLS_ENABLE}
+          connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT:10000}
+          timeout: ${MAIL_SMTP_READ_TIMEOUT:10000}
+          writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT:10000}
 
 jwt:
   secret: ${JWT_SECRET}

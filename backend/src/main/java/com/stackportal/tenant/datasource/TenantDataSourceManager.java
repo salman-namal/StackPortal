@@ -1,8 +1,8 @@
 package com.stackportal.tenant.datasource;
 
-import com.stackportal.tenant.entity.Tenant;
-import com.stackportal.tenant.entity.TenantStatus;
-import com.stackportal.tenant.repository.TenantRepository;
+import com.stackportal.entity.master.Tenant;
+import com.stackportal.entity.master.TenantStatus;
+import com.stackportal.repository.master.TenantRepository;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>On application startup all ACTIVE tenants are loaded from the master
  * database and their DataSources are registered into
  * {@link TenantRoutingDataSource}. Subsequent create/update/delete operations
- * in {@link com.stackportal.tenant.service.TenantService} call the
+ * in {@link com.stackportal.service.platform.TenantService} call the
  * {@code registerTenant} / {@code removeTenant} helpers to keep the routing
  * map in sync without a restart.
  */

@@ -4,7 +4,7 @@ import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validatio
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
+import { AuthLayoutComponent } from '../../../../layouts/auth/auth-layout/auth-layout.component';
 import { ApiResponse, AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 

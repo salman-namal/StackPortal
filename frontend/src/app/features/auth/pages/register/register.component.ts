@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
+import { AuthLayoutComponent } from '../../../../layouts/auth/auth-layout/auth-layout.component';
 import { SocialLoginComponent } from '../../components/social-login/social-login.component';
 import { AuthService, LoginResponse } from '../../../../core/services/auth.service';
 

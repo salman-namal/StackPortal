@@ -3,8 +3,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { AUTH_ROUTES } from './features/auth/auth.routes';
 import { AuthGuard } from './core/guards/auth.guard';
 import { RoleGuard } from './core/guards/role.guard';
-import { DashboardComponent } from './admin/dashboard/dashboard.component';
-import { DashboardOverviewComponent } from './admin/dashboard/dashboard-overview.component';
+import { DashboardComponent } from './layouts/dashboard/dashboard-layout.component';
+import { DashboardOverviewComponent } from './features/dashboard/pages/dashboard-overview.component';
 
 const routes: Routes = [
   {
@@ -13,7 +13,7 @@ const routes: Routes = [
   },
   {
     path: 'admin',
-    loadChildren: () => import('./admin/admin.module').then((m) => m.AdminModule),
+    loadChildren: () => import('./features/admin/admin.module').then((m) => m.AdminModule),
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
   },
@@ -23,14 +23,14 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: '', component: DashboardOverviewComponent, pathMatch: 'full' },
-      { path: 'users', loadComponent: () => import('./dashboard/users/dashboard-users.component').then((m) => m.DashboardUsersComponent) },
-      { path: 'tenants', loadComponent: () => import('./dashboard/dashboard-tenants.component').then((m) => m.DashboardTenantsComponent) }
+      { path: 'users', loadComponent: () => import('./features/users/pages/users-list/dashboard-users.component').then((m) => m.DashboardUsersComponent) },
+      { path: 'tenants', loadComponent: () => import('./features/tenants/pages/tenants-list.component').then((m) => m.DashboardTenantsComponent) }
     ]
   },
 
   {
     path: 'upcoming/:feature',
-    loadComponent: () => import('./shared/components/upcoming/upcoming.component').then((m) => m.UpcomingComponent),
+    loadComponent: () => import('./features/upcoming/pages/upcoming/upcoming.component').then((m) => m.UpcomingComponent),
     canActivate: [AuthGuard]
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },

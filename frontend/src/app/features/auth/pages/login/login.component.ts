@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterModule } from '@angular/router';
-import { AuthLayoutComponent } from '../../components/auth-layout/auth-layout.component';
+import { AuthLayoutComponent } from '../../../../layouts/auth/auth-layout/auth-layout.component';
 import { finalize } from 'rxjs';
 import { ApiResponse, AuthService, LoginResponse } from '../../../../core/services/auth.service';
 import { SocialLoginComponent } from '../../components/social-login/social-login.component';

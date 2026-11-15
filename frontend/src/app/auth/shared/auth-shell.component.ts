@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnInit } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { ThemeService } from '../../features/auth/services/theme.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-auth-shell',

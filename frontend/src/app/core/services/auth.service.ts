@@ -3,6 +3,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom, Observable, tap } from 'rxjs';
 import { appConfig } from '../config/app-config';
+import { AuthenticatedUser, AuthResponse, LoginResponse } from '../models/auth.models';
+import { ApiResponse } from '../models/api-response.models';
+
+export type { AuthenticatedUser, AuthResponse, LoginResponse } from '../models/auth.models';
+export type { ApiResponse } from '../models/api-response.models';
 
 declare global {
   interface Window {
@@ -22,43 +27,6 @@ declare global {
       };
     };
   }
-}
-
-export interface AuthResponse {
-  success: boolean;
-  message: string;
-  data: {
-    accessToken: string;
-    refreshToken: string;
-    tokenType: string;
-    roles: string[];
-  };
-}
-
-export interface AuthenticatedUser {
-  id: number;
-  name: string;
-  email: string;
-  username: string;
-  roles: string[];
-  emailVerified: boolean;
-}
-
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  data: {
-    accessToken: string;
-    refreshToken: string;
-    tokenType: string;
-    user: AuthenticatedUser;
-  };
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
 }
 
 @Injectable({ providedIn: 'root' })

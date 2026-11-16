@@ -3,6 +3,7 @@ package com.stackportal.service.platform;
 import com.stackportal.common.exception.TenantProvisioningException;
 import com.stackportal.tenant.datasource.TenantDataSourceManager;
 import com.stackportal.tenant.provisioning.TenantDatabaseProvisioner;
+import com.stackportal.tenant.migration.TenantMigrationRunner;
 import com.stackportal.dto.request.tenant.TenantRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
 import com.stackportal.entity.master.Tenant;
@@ -25,6 +26,7 @@ public class TenantService {
     private final TenantRepository            tenantRepository;
     private final TenantDataSourceManager     tenantDataSourceManager;
     private final TenantDatabaseProvisioner   tenantDatabaseProvisioner;
+    private final TenantMigrationRunner       tenantMigrationRunner;
 
     @Value("${app.datasource.master.username}")
     private String masterUsername;
@@ -54,6 +56,11 @@ public class TenantService {
                 && !request.databasePassword().isBlank())
                 ? request.databasePassword()
                 : masterPassword;
+
+        // Flyway remains opt-in until production compatibility baselines are
+        // approved. A new tenant must never be activated without its schema.
+        tenantMigrationRunner.migrateNewTenant(
+                provision.jdbcUrl(), masterUsername, dbPassword);
 
         // --- Persist the tenant record ---
         Tenant tenant = Tenant.builder()

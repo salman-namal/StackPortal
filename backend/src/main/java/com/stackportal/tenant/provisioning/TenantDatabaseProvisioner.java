@@ -16,7 +16,7 @@ import java.sql.Statement;
  * Responsible for physically creating a new PostgreSQL database for a tenant,
  * initialising its schema, and verifying the connection before returning.
  *
- * <p>All DDL against the master DB (CREATE DATABASE / DROP DATABASE) is executed
+ * <p>Database creation is executed
  * through the master {@link DataSource} using raw JDBC — these statements cannot
  * run inside a regular transaction and must go over an auto-commit connection.</p>
  */
@@ -57,27 +57,18 @@ public class TenantDatabaseProvisioner {
         String dbName = generateDbName(tenantCode);
         log.info("Provisioning tenant database '{}'", dbName);
 
-        boolean created = false;
         try {
             createDatabase(dbName);
-            created = true;
 
             String jdbcUrl = buildJdbcUrl(dbName);
-            initSchema(jdbcUrl);
             verifyConnection(jdbcUrl);
 
             log.info("Tenant database '{}' provisioned successfully", dbName);
             return new ProvisionResult(dbName, jdbcUrl);
 
         } catch (TenantProvisioningException ex) {
-            if (created) {
-                cleanupDatabase(dbName);
-            }
             throw ex;
         } catch (Exception ex) {
-            if (created) {
-                cleanupDatabase(dbName);
-            }
             throw new TenantProvisioningException(
                     "Failed to provision tenant database '" + dbName + "': " + ex.getMessage(), ex);
         }
@@ -151,38 +142,6 @@ public class TenantDatabaseProvisioner {
         } catch (Exception ex) {
             throw new TenantProvisioningException(
                     "Could not determine JDBC URL for tenant DB: " + ex.getMessage(), ex);
-        }
-    }
-
-    /**
-     * Runs Hibernate {@code hbm2ddl} (update mode) against the new tenant
-     * DataSource to create all tenant-scoped tables.
-     */
-    private void initSchema(String jdbcUrl) {
-        log.info("Initialising schema in '{}'", jdbcUrl);
-        try (HikariDataSource ds = buildTempDataSource(jdbcUrl)) {
-
-            // Use a LocalContainerEntityManagerFactoryBean in "create" mode so
-            // Hibernate generates the DDL for all tenant-mapped entities.
-            org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean emfb =
-                    new org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean();
-            emfb.setDataSource(ds);
-            emfb.setPackagesToScan("com.stackportal.entity.tenant");
-            emfb.setJpaVendorAdapter(new org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter());
-
-            java.util.Map<String, Object> props = new java.util.HashMap<>();
-            props.put("hibernate.hbm2ddl.auto", "update");
-            props.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-            emfb.setJpaPropertyMap(props);
-
-            emfb.afterPropertiesSet();
-            // afterPropertiesSet() triggers schema export; close the factory right away.
-            emfb.getObject().close();
-
-            log.info("Schema initialised in '{}'", jdbcUrl);
-        } catch (Exception ex) {
-            throw new TenantProvisioningException(
-                    "Schema initialisation failed for '" + jdbcUrl + "': " + ex.getMessage(), ex);
         }
     }
 

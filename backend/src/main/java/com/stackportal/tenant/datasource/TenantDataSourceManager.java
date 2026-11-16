@@ -7,10 +7,12 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
+import jakarta.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,6 +36,21 @@ public class TenantDataSourceManager {
 
     /** Live pool cache — key = tenant id. */
     private final Map<Long, DataSource> dataSources = new ConcurrentHashMap<>();
+
+    @Value("${app.datasource.tenant.maximum-pool-size:10}")
+    private int maximumPoolSize;
+
+    @Value("${app.datasource.tenant.minimum-idle:0}")
+    private int minimumIdle;
+
+    @Value("${app.datasource.tenant.idle-timeout:600000}")
+    private long idleTimeout;
+
+    @Value("${app.datasource.tenant.connection-timeout:30000}")
+    private long connectionTimeout;
+
+    @Value("${app.datasource.tenant.max-lifetime:1800000}")
+    private long maxLifetime;
 
     // -----------------------------------------------------------------------
     // Startup
@@ -97,6 +114,16 @@ public class TenantDataSourceManager {
         return dataSources.containsKey(tenantId);
     }
 
+    @PreDestroy
+    public void closePools() {
+        dataSources.values().forEach(dataSource -> {
+            if (dataSource instanceof HikariDataSource hikari && !hikari.isClosed()) {
+                hikari.close();
+            }
+        });
+        dataSources.clear();
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
@@ -113,11 +140,11 @@ public class TenantDataSourceManager {
         ds.setUsername(tenant.getDatabaseUsername());
         ds.setPassword(tenant.getDatabasePassword());
         ds.setDriverClassName("org.postgresql.Driver");
-        ds.setMaximumPoolSize(10);
-        ds.setMinimumIdle(2);
-        ds.setIdleTimeout(600_000L);
-        ds.setConnectionTimeout(30_000L);
-        ds.setMaxLifetime(1_800_000L);
+        ds.setMaximumPoolSize(maximumPoolSize);
+        ds.setMinimumIdle(minimumIdle);
+        ds.setIdleTimeout(idleTimeout);
+        ds.setConnectionTimeout(connectionTimeout);
+        ds.setMaxLifetime(maxLifetime);
         return ds;
     }
 }

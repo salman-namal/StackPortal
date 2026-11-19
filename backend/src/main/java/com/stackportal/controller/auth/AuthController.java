@@ -5,6 +5,7 @@ import com.stackportal.dto.request.auth.*;
 import com.stackportal.dto.response.auth.AuthResponse;
 import com.stackportal.dto.response.auth.LoginResponse;
 import com.stackportal.service.auth.AuthService;
+import com.stackportal.service.auth.PlatformAuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PlatformAuthService platformAuthService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request,
@@ -29,6 +31,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request,
                                                             HttpServletRequest httpRequest) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    /** Platform sign-in intentionally bypasses tenant resolution. */
+    @PostMapping("/platform/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> platformLogin(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(platformAuthService.login(request));
     }
 
     @PostMapping("/refresh-token")

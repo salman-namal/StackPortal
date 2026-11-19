@@ -26,8 +26,8 @@ export class TenantsService {
     return this.http.get<ApiResponse<PageResponse<TenantDto>>>(this.tenantsUrl, { params });
   }
 
-  delete(id: number) {
-    return this.http.delete<ApiResponse<void>>(`${this.tenantsUrl}/${id}`);
+  delete(id: number, tenantName: string) {
+    return this.http.delete<ApiResponse<void>>(`${this.tenantsUrl}/${id}`, { body: { tenantName } });
   }
 
   get(id: number) {

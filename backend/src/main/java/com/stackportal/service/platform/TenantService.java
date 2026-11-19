@@ -95,7 +95,7 @@ public class TenantService {
                 .databaseUrl(provision.jdbcUrl())
                 .databaseUsername(masterUsername)
                 .databasePassword(dbPassword)
-                .status(request.status() != null ? request.status() : TenantStatus.ACTIVE)
+                .status(TenantStatus.ACTIVE)
                 .build();
 
         Tenant saved;
@@ -178,10 +178,6 @@ public class TenantService {
             tenant.setDatabasePassword(request.databasePassword());
         }
 
-        if (request.status() != null) {
-            tenant.setStatus(request.status());
-        }
-
         Tenant saved = tenantRepository.save(tenant);
         audit(saved.getId(), "UPDATED", "Tenant profile updated");
 
@@ -201,22 +197,28 @@ public class TenantService {
         return toResponse(saved);
     }
 
-    public void delete(Long id) {
+    public void delete(Long id, String confirmationName) {
         Tenant tenant = findOrThrow(id);
         Long currentTenantId = com.stackportal.tenant.context.TenantContext.getTenantId();
         if (id.equals(currentTenantId) || tenant.getCode().equalsIgnoreCase(defaultTenantCode)) {
-            throw new IllegalStateException("The default tenant or the tenant that hosts the current platform session cannot be archived");
+            throw new IllegalStateException("Protected tenants cannot be deleted");
         }
-        tenant.setStatus(TenantStatus.SUSPENDED);
+        if (confirmationName == null || !tenant.getName().equals(confirmationName.trim())) {
+            throw new IllegalArgumentException("Type the exact tenant name to confirm permanent deletion");
+        }
+        // Persist INACTIVE first so no new tenant authentication or datasource can be created.
+        tenant.setStatus(TenantStatus.INACTIVE);
         tenantRepository.save(tenant);
         tenantDataSourceManager.removeTenant(id);
-        audit(id, "ARCHIVED", "Tenant archived; its database was preserved");
-        log.info("Tenant {} archived and datasource pool closed", id);
+        tenantDatabaseProvisioner.deleteTrustedDatabase(tenant.getDatabaseName(), tenant.getDatabaseUrl());
+        tenantRepository.delete(tenant);
+        audit(id, "DELETED", "Tenant database and master record permanently deleted");
+        log.info("Tenant {} permanently deleted", id);
     }
 
     public TenantResponse setStatus(Long id, TenantStatus status) {
-        if (status == null || status == TenantStatus.SUSPENDED) {
-            throw new IllegalArgumentException("Use archive to suspend a tenant");
+        if (status == null) {
+            throw new IllegalArgumentException("Tenant status is required");
         }
         Tenant tenant = findOrThrow(id);
         tenant.setStatus(status);

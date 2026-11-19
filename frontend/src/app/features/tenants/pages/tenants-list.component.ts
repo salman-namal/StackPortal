@@ -20,20 +20,17 @@ type TenantRow = TenantDto & Record<string, unknown>;
 export class DashboardTenantsComponent implements OnInit, OnDestroy {
   readonly columns: DataTableColumn[] = [
     { key: 'name', label: 'Tenant Name', sortable: true, avatar: true },
-    { key: 'code', label: 'Tenant Code', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
-    { key: 'website', label: 'Website' },
     { key: 'phone', label: 'Phone' },
     { key: 'city', label: 'City' },
     { key: 'country', label: 'Country' },
     { key: 'status', label: 'Status', sortable: true, badge: true, format: value => String(value).toLowerCase() },
-    { key: 'createdAt', label: 'Created Date', sortable: true, format: value => value ? new Date(String(value)).toLocaleDateString() : '—' }
   ];
 
   readonly actions: DataTableAction[] = [
     { key: 'view', label: 'View', icon: 'visibility' },
     { key: 'edit', label: 'Edit', icon: 'edit' },
-    { key: 'status', label: 'Activate / Deactivate', icon: 'visibility' },
+    { key: 'status', label: row => row['status'] === 'ACTIVE' ? 'Deactivate' : 'Activate', icon: row => row['status'] === 'ACTIVE' ? 'toggle_off' : 'toggle_on' },
     { key: 'delete', label: 'Delete', icon: 'delete', danger: true }
   ];
 
@@ -146,7 +143,9 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
       return;
     }
     if (event.key === 'delete') {
-      if (window.confirm('Delete this tenant?')) this.deleteTenants([id]);
+      const name = String(event.row['name'] ?? '');
+      const confirmation = window.prompt(`Permanent deletion cannot be undone. Type "${name}" to delete this tenant.`);
+      if (confirmation === name) this.deleteTenants([{ id, name }]);
       return;
     }
   }
@@ -155,14 +154,14 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
 
   onBulkDelete(rows: Record<string, unknown>[]): void {
     const ids = rows.map(row => Number(row['id'])).filter(Number.isFinite);
-    if (ids.length && window.confirm(`Delete ${ids.length} selected tenant(s)?`)) this.deleteTenants(ids);
+    if (ids.length) this.toast.error('Bulk permanent deletion is not supported. Delete tenants one at a time.');
   }
 
-  private deleteTenants(ids: number[]): void {
-    forkJoin(ids.map(id => this.tenantsService.delete(id))).pipe(takeUntil(this.destroy$)).subscribe({
+  private deleteTenants(tenants: { id: number; name: string }[]): void {
+    forkJoin(tenants.map(tenant => this.tenantsService.delete(tenant.id, tenant.name))).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
-        this.toast.success(ids.length === 1 ? 'Tenant deleted.' : 'Tenants deleted.');
-        if (this.rows.length === ids.length && this.page > 0) this.page--;
+        this.toast.success('Tenant permanently deleted.');
+        if (this.rows.length === tenants.length && this.page > 0) this.page--;
         this.loadTenants();
       },
       error: error => {

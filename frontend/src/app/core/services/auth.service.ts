@@ -36,6 +36,7 @@ export class AuthService {
   private readonly refreshTokenKey = 'refresh_token';
   private readonly rolesKey = 'roles';
   private readonly userKey = 'authenticated_user';
+  private readonly scopeKey = 'authentication_scope';
   private readonly googleClientId = appConfig.googleClientId;
 
   private loggedIn$ = new BehaviorSubject<boolean>(this.hasValidToken());
@@ -44,14 +45,15 @@ export class AuthService {
   constructor(private http: HttpClient) {}
 
   login(email: string, password: string): Observable<LoginResponse> {
+    const platformLogin = this.isPlatformHost();
     return this.http
       .post<LoginResponse>(
-        `${this.apiUrl}/auth/login`,
+        `${this.apiUrl}${platformLogin ? '/auth/platform/login' : '/auth/login'}`,
         { email, password },
-        { headers: this.buildAuthHeaders() }
+        { headers: this.buildAuthHeaders(!platformLogin) }
       )
       .pipe(
-        tap(res => this.handleLoginSuccess(res))
+        tap(res => this.handleLoginSuccess(res, platformLogin ? 'PLATFORM' : 'TENANT'))
       );
   }
 
@@ -167,16 +169,19 @@ export class AuthService {
    *
    * for local development.
    */
-  private buildAuthHeaders(): HttpHeaders {
+  private buildAuthHeaders(includeTenant: boolean = true): HttpHeaders {
     let headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
 
-    return this.applyTenantHeaders(headers);
+    return includeTenant ? this.applyTenantHeaders(headers) : headers;
   }
 
   /** Supplies the current tenant context to protected API calls as well as auth calls. */
   tenantHeaders(): Record<string, string> {
+    if (this.getAuthenticationScope() === 'PLATFORM' || this.isPlatformHost()) {
+      return {};
+    }
     const tenantCode = this.resolveTenantCode();
     const tenantId = this.resolveTenantId();
     if (tenantCode) return { 'X-Tenant-Code': tenantCode };
@@ -219,18 +224,14 @@ export class AuthService {
       }
     }
 
-    // Standard local development:
-    // localhost -> stack
-    // 127.0.0.1 -> stack
-    // 0.0.0.0 -> stack
+    // The bare local host is the platform/SUPER_ADMIN application. Tenant
+    // users sign in through a tenant host such as stack.localhost.
     if (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
       hostname === '0.0.0.0'
     ) {
-      const configuredTenant = (appConfig as { tenantCode?: string }).tenantCode;
-
-      return configuredTenant?.trim() || 'stack';
+      return null;
     }
 
     // For non-local environments, use configured tenant if available.
@@ -329,7 +330,7 @@ export class AuthService {
     this.roles$.next(res.data.roles || []);
   }
 
-  private handleLoginSuccess(res: LoginResponse): void {
+  private handleLoginSuccess(res: LoginResponse, scope: 'PLATFORM' | 'TENANT' = 'TENANT'): void {
     if (
       !res.success ||
       !res.data?.accessToken ||
@@ -358,6 +359,7 @@ export class AuthService {
       this.rolesKey,
       JSON.stringify(res.data.user.roles || [])
     );
+    localStorage.setItem(this.scopeKey, scope);
 
     this.loggedIn$.next(true);
     this.roles$.next(res.data.user.roles || []);
@@ -462,9 +464,21 @@ export class AuthService {
     localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.rolesKey);
     localStorage.removeItem(this.userKey);
+    localStorage.removeItem(this.scopeKey);
 
     this.loggedIn$.next(false);
     this.roles$.next([]);
+  }
+
+  private getAuthenticationScope(): 'PLATFORM' | 'TENANT' | null {
+    const scope = localStorage.getItem(this.scopeKey);
+    return scope === 'PLATFORM' || scope === 'TENANT' ? scope : null;
+  }
+
+  private isPlatformHost(): boolean {
+    if (typeof window === 'undefined') return false;
+    const hostname = window.location.hostname.toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
   }
 }
 

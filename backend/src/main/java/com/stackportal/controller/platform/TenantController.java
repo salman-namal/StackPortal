@@ -2,6 +2,7 @@ package com.stackportal.controller.platform;
 
 import com.stackportal.common.response.ApiResponse;
 import com.stackportal.dto.request.tenant.TenantRequest;
+import com.stackportal.dto.request.tenant.TenantDeletionRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 import com.stackportal.service.platform.TenantService;
@@ -87,9 +88,10 @@ public class TenantController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id,
+                                                    @Valid @RequestBody TenantDeletionRequest request) {
 
-        tenantService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok("Tenant archived successfully; its database was preserved", null));
+        tenantService.delete(id, request.tenantName());
+        return ResponseEntity.ok(ApiResponse.ok("Tenant permanently deleted", null));
     }
 }

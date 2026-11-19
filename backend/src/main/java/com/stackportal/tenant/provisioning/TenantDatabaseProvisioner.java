@@ -74,6 +74,29 @@ public class TenantDatabaseProvisioner {
         }
     }
 
+    /**
+     * Permanently removes a tenant database only after the caller has loaded
+     * both identifiers from trusted master-database metadata. This method never
+     * accepts a database identifier supplied by an HTTP request.
+     */
+    public void deleteTrustedDatabase(String databaseName, String trustedJdbcUrl) {
+        if (databaseName == null || !databaseName.matches("tenant_[a-z0-9_]{1,56}")) {
+            throw new TenantProvisioningException("Refusing to delete an unsafe tenant database identifier");
+        }
+        if (trustedJdbcUrl == null || !trustedJdbcUrl.endsWith("/" + databaseName)) {
+            throw new TenantProvisioningException("Tenant database metadata does not match its trusted identifier");
+        }
+        try (Connection conn = masterDataSource.getConnection(); Statement stmt = conn.createStatement()) {
+            conn.setAutoCommit(true);
+            stmt.executeUpdate("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    + "WHERE datname = '" + databaseName + "' AND pid <> pg_backend_pid()");
+            stmt.executeUpdate("DROP DATABASE \"" + databaseName + "\"");
+            log.info("Tenant database '{}' deleted", databaseName);
+        } catch (Exception ex) {
+            throw new TenantProvisioningException("Failed to delete tenant database '" + databaseName + "': " + ex.getMessage(), ex);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------

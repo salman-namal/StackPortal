@@ -3,6 +3,7 @@ package com.stackportal.security.filter;
 import com.stackportal.tenant.context.TenantContext;
 import com.stackportal.entity.master.TenantStatus;
 import com.stackportal.repository.master.TenantRepository;
+import com.stackportal.repository.master.PlatformUserRepository;
 import com.stackportal.service.user.UserService;
 import com.stackportal.security.jwt.JwtService;
 import jakarta.servlet.FilterChain;
@@ -28,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserService userService;
     private final TenantRepository tenantRepository;
+    private final PlatformUserRepository platformUserRepository;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -45,9 +47,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        final String username = jwtService.extractUsername(jwt);
+        final String username;
+        final String scope;
+        try {
+            username = jwtService.extractUsername(jwt);
+            scope = jwtService.getScopeFromToken(jwt);
+        } catch (RuntimeException ex) {
+            writeError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired access token");
+            return;
+        }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if ("PLATFORM".equals(scope)) {
+                authenticatePlatformRequest(request, response, filterChain, jwt, username);
+                return;
+            }
+
+            if (isPlatformRoute(request)) {
+                writeError(response, HttpStatus.FORBIDDEN, "Tenant tokens cannot access platform APIs");
+                return;
+            }
             Long tenantId = jwtService.getTenantIdFromToken(jwt);
             if (tenantId == null) {
                 writeError(response, HttpStatus.UNAUTHORIZED, "Invalid JWT tenant claim");
@@ -87,6 +106,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticatePlatformRequest(HttpServletRequest request,
+                                             HttpServletResponse response,
+                                             FilterChain filterChain,
+                                             String jwt,
+                                             String username) throws IOException, ServletException {
+        if (!isPlatformRoute(request)) {
+            writeError(response, HttpStatus.FORBIDDEN, "Platform tokens cannot access tenant APIs");
+            return;
+        }
+        var user = platformUserRepository.findByEmailIgnoreCaseOrUsernameIgnoreCase(username, username);
+        if (user.isEmpty() || !user.get().isEnabled() || !jwtService.isTokenValid(jwt, user.get().getUsername())) {
+            writeError(response, HttpStatus.UNAUTHORIZED, "Invalid platform access token");
+            return;
+        }
+        UsernamePasswordAuthenticationToken authToken =
+                new UsernamePasswordAuthenticationToken(user.get(), null, user.get().getAuthorities());
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+        filterChain.doFilter(request, response);
+    }
+
+    private boolean isPlatformRoute(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        return path.startsWith(contextPath + "/api/tenants")
+                || path.startsWith(contextPath + "/api/platform/");
     }
 
     private void writeError(HttpServletResponse response, HttpStatus status, String message) throws IOException {

@@ -4,7 +4,7 @@
     <button class="mobile-close" (click)="close.emit()" aria-label="Close menu"><app-dashboard-icon name="x" /></button>
   </div>
   <nav>
-    <a *ngFor="let link of links" [routerLink]="link.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: link.route === '/dashboard' }" [attr.data-tooltip]="link.label" [attr.aria-label]="link.label" (click)="close.emit()"><app-dashboard-icon [name]="link.icon" /><span class="nav-label">{{ link.label }}</span></a>
+    <a *ngFor="let link of visibleLinks" [routerLink]="link.route" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: link.route === '/dashboard' }" [attr.data-tooltip]="link.label" [attr.aria-label]="link.label" (click)="close.emit()"><app-dashboard-icon [name]="link.icon" /><span class="nav-label">{{ link.label }}</span></a>
   </nav>
   <div class="sidebar-bottom">
     <div class="user-mini"><span class="avatar">{{ userName.slice(0, 1) }}</span><span class="user-details"><strong>{{ userName }}</strong><small>Workspace owner</small></span></div>

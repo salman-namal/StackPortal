@@ -172,16 +172,21 @@ export class AuthService {
       'Content-Type': 'application/json'
     });
 
+    return this.applyTenantHeaders(headers);
+  }
+
+  /** Supplies the current tenant context to protected API calls as well as auth calls. */
+  tenantHeaders(): Record<string, string> {
     const tenantCode = this.resolveTenantCode();
     const tenantId = this.resolveTenantId();
+    if (tenantCode) return { 'X-Tenant-Code': tenantCode };
+    if (tenantId !== null) return { 'X-Tenant-ID': String(tenantId) };
+    return {};
+  }
 
-    if (tenantCode) {
-      headers = headers.set('X-Tenant-Code', tenantCode);
-    } else if (tenantId !== null) {
-      headers = headers.set('X-Tenant-ID', String(tenantId));
-    }
-
-    return headers;
+  private applyTenantHeaders(headers: HttpHeaders): HttpHeaders {
+    return Object.entries(this.tenantHeaders()).reduce(
+      (result, [name, value]) => result.set(name, value), headers);
   }
 
   /**

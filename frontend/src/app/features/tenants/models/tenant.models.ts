@@ -7,8 +7,8 @@ export interface TenantDto {
   phone?: string;
   city?: string;
   country?: string;
-  active: boolean;
-  logoUrl?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  logo?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -19,5 +19,5 @@ export interface TenantQuery {
   search?: string;
   sortBy: string;
   sortDir: 'asc' | 'desc';
-  active?: boolean;
+  status?: 'ACTIVE' | 'INACTIVE';
 }

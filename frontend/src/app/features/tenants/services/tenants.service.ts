@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { appConfig } from '../../../core/config/app-config';
 import { ApiResponse, PageResponse } from '../../../core/models/api-response.models';
 import { TenantDto, TenantQuery } from '../models/tenant.models';
+export interface TenantDashboard { totalTenants: number; activeTenants: number; inactiveTenants: number; recentTenants: TenantDto[]; }
 
 export type { TenantDto, TenantQuery } from '../models/tenant.models';
 export type { ApiResponse, PageResponse } from '../../../core/models/api-response.models';
@@ -21,7 +22,7 @@ export class TenantsService {
       .set('sortBy', query.sortBy)
       .set('sortDir', query.sortDir);
     if (query.search) params = params.set('search', query.search);
-    if (query.active !== undefined) params = params.set('active', String(query.active));
+    if (query.status) params = params.set('status', query.status);
     return this.http.get<ApiResponse<PageResponse<TenantDto>>>(this.tenantsUrl, { params });
   }
 
@@ -33,15 +34,17 @@ export class TenantsService {
     return this.http.get<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}`);
   }
 
-  create(payload: { name: string; code: string; email?: string; website?: string; phone?: string; city?: string; country?: string; active?: boolean; logoUrl?: string }) {
+  dashboard() { return this.http.get<ApiResponse<TenantDashboard>>(`${this.tenantsUrl}/dashboard`); }
+
+  create(payload: { name: string; code: string; adminName: string; adminEmail: string; email?: string; website?: string; phone?: string; city?: string; country?: string; status?: 'ACTIVE' | 'INACTIVE'; logo?: string }) {
     return this.http.post<ApiResponse<TenantDto>>(this.tenantsUrl, payload);
   }
 
-  update(id: number, payload: { name: string; code: string; email?: string; website?: string; phone?: string; city?: string; country?: string; active?: boolean; logoUrl?: string }) {
+  update(id: number, payload: { name: string; code: string; email?: string; website?: string; phone?: string; city?: string; country?: string; status?: 'ACTIVE' | 'INACTIVE'; logo?: string }) {
     return this.http.put<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}`, payload);
   }
 
-  setActive(id: number, active: boolean) {
-    return this.http.patch<ApiResponse<void>>(`${this.tenantsUrl}/${id}/status`, {}, { params: new HttpParams().set('active', String(active)) });
+  setStatus(id: number, status: 'ACTIVE' | 'INACTIVE') {
+    return this.http.patch<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}/status`, {}, { params: new HttpParams().set('status', status) });
   }
 }

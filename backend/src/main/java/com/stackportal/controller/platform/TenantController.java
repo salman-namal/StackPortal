@@ -3,6 +3,7 @@ package com.stackportal.controller.platform;
 import com.stackportal.common.response.ApiResponse;
 import com.stackportal.dto.request.tenant.TenantRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
+import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 import com.stackportal.service.platform.TenantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import com.stackportal.entity.master.TenantStatus;
 
 import java.util.List;
 
@@ -27,6 +32,11 @@ public class TenantController {
 
     private final TenantService tenantService;
 
+    @GetMapping("/dashboard")
+    public ResponseEntity<ApiResponse<TenantDashboardResponse>> dashboard() {
+        return ResponseEntity.ok(ApiResponse.ok("Tenant dashboard retrieved", tenantService.dashboard()));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<TenantResponse>> create(
             @Valid @RequestBody TenantRequest request) {
@@ -37,10 +47,27 @@ public class TenantController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<TenantResponse>>> getAll() {
+    public ResponseEntity<ApiResponse<Page<TenantResponse>>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) TenantStatus status) {
+
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+        String safeSort = List.of("name", "code", "status", "createdAt", "updatedAt").contains(sortBy) ? sortBy : "createdAt";
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
         return ResponseEntity.ok(
-                ApiResponse.ok("Tenants retrieved successfully", tenantService.getAll()));
+                ApiResponse.ok("Tenants retrieved successfully", tenantService.search(search, status, PageRequest.of(safePage, safeSize, Sort.by(direction, safeSort)))));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<TenantResponse>> setStatus(@PathVariable Long id,
+                                                                  @RequestParam TenantStatus status) {
+        return ResponseEntity.ok(ApiResponse.ok("Tenant status updated", tenantService.setStatus(id, status)));
     }
 
     @GetMapping("/{id}")
@@ -63,6 +90,6 @@ public class TenantController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
 
         tenantService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok("Tenant deleted successfully", null));
+        return ResponseEntity.ok(ApiResponse.ok("Tenant archived successfully; its database was preserved", null));
     }
 }

@@ -1,6 +1,8 @@
 package com.stackportal.security.filter;
 
 import com.stackportal.tenant.context.TenantContext;
+import com.stackportal.entity.master.TenantStatus;
+import com.stackportal.repository.master.TenantRepository;
 import com.stackportal.service.user.UserService;
 import com.stackportal.security.jwt.JwtService;
 import jakarta.servlet.FilterChain;
@@ -25,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserService userService;
+    private final TenantRepository tenantRepository;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -48,6 +51,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long tenantId = jwtService.getTenantIdFromToken(jwt);
             if (tenantId == null) {
                 writeError(response, HttpStatus.UNAUTHORIZED, "Invalid JWT tenant claim");
+                return;
+            }
+            if (tenantRepository.findById(tenantId)
+                    .map(tenant -> tenant.getStatus() != TenantStatus.ACTIVE)
+                    .orElse(true)) {
+                writeError(response, HttpStatus.FORBIDDEN, "Tenant is inactive or does not exist");
                 return;
             }
 

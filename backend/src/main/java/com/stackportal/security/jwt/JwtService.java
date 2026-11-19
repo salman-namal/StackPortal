@@ -40,9 +40,14 @@ public class JwtService {
     }
 
     public String generateRefreshToken(String username) {
+        return generateRefreshToken(username, Map.of());
+    }
+
+    public String generateRefreshToken(String username, Map<String, ?> extraClaims) {
         Instant now = Instant.now();
         Instant expiry = now.plus(refreshTokenExpirationDays, ChronoUnit.DAYS);
         return Jwts.builder()
+                .setClaims(extraClaims == null ? Map.of() : extraClaims)
                 .setSubject(username)
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))

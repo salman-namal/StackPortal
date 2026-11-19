@@ -3,6 +3,10 @@ package com.stackportal.security.filter;
 import com.stackportal.security.jwt.JwtService;
 import com.stackportal.service.user.UserService;
 import com.stackportal.tenant.context.TenantContext;
+import com.stackportal.repository.master.TenantRepository;
+import com.stackportal.entity.master.Tenant;
+import com.stackportal.entity.master.TenantStatus;
+import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -23,10 +27,14 @@ class JwtAuthenticationFilterTest {
     void rejectsAJwtWhenTheRequestTenantDoesNotMatchItsTenantClaim() throws Exception {
         JwtService jwtService = mock(JwtService.class);
         UserService userService = mock(UserService.class);
+        TenantRepository tenantRepository = mock(TenantRepository.class);
         when(jwtService.extractUsername("token")).thenReturn("user@example.com");
         when(jwtService.getTenantIdFromToken("token")).thenReturn(42L);
 
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, userService);
+        Tenant tenant = new Tenant();
+        tenant.setStatus(TenantStatus.ACTIVE);
+        when(tenantRepository.findById(42L)).thenReturn(Optional.of(tenant));
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, userService, tenantRepository);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
         request.addHeader("Authorization", "Bearer token");
         request.addHeader("X-Tenant-ID", "7");

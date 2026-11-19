@@ -3,6 +3,7 @@ package com.stackportal.service.platform;
 import com.stackportal.common.exception.TenantProvisioningException;
 import com.stackportal.tenant.datasource.TenantDataSourceManager;
 import com.stackportal.tenant.provisioning.TenantDatabaseProvisioner;
+import com.stackportal.tenant.provisioning.TenantInitialAdminProvisioner;
 import com.stackportal.tenant.migration.TenantMigrationRunner;
 import com.stackportal.dto.request.tenant.TenantRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
@@ -14,8 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 
 @Slf4j
 @Service
@@ -27,6 +33,8 @@ public class TenantService {
     private final TenantDataSourceManager     tenantDataSourceManager;
     private final TenantDatabaseProvisioner   tenantDatabaseProvisioner;
     private final TenantMigrationRunner       tenantMigrationRunner;
+    private final TenantInitialAdminProvisioner tenantInitialAdminProvisioner;
+    private final com.stackportal.repository.master.TenantAuditEventRepository tenantAuditEventRepository;
 
     @Value("${app.datasource.master.username}")
     private String masterUsername;
@@ -34,11 +42,18 @@ public class TenantService {
     @Value("${app.datasource.master.password}")
     private String masterPassword;
 
+    @Value("${app.platform.default-tenant-code:stack}")
+    private String defaultTenantCode;
+
     // -----------------------------------------------------------------------
     // CRUD
     // -----------------------------------------------------------------------
 
     public TenantResponse create(TenantRequest request) {
+        if (request.adminName() == null || request.adminName().isBlank()
+                || request.adminEmail() == null || request.adminEmail().isBlank()) {
+            throw new IllegalArgumentException("An initial tenant administrator name and email are required");
+        }
         // --- Business-rule checks ---
         if (tenantRepository.existsByCode(request.code())) {
             throw new IllegalArgumentException("Tenant code already exists: " + request.code());
@@ -61,6 +76,9 @@ public class TenantService {
         // approved. A new tenant must never be activated without its schema.
         tenantMigrationRunner.migrateNewTenant(
                 provision.jdbcUrl(), masterUsername, dbPassword);
+
+        tenantInitialAdminProvisioner.provision(provision.jdbcUrl(), masterUsername, dbPassword,
+                request.adminName().trim(), request.adminEmail().trim().toLowerCase());
 
         // --- Persist the tenant record ---
         Tenant tenant = Tenant.builder()
@@ -103,6 +121,7 @@ public class TenantService {
             }
         }
 
+        audit(saved.getId(), "CREATED", "Tenant and initial ADMIN provisioned");
         return toResponse(saved);
     }
 
@@ -115,6 +134,20 @@ public class TenantService {
     }
 
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
+    public Page<TenantResponse> search(String search, TenantStatus status, Pageable pageable) {
+        return tenantRepository.search(search == null ? "" : search.trim(), status, pageable)
+                .map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
+    public TenantDashboardResponse dashboard() {
+        return new TenantDashboardResponse(tenantRepository.count(),
+                tenantRepository.countByStatus(TenantStatus.ACTIVE),
+                tenantRepository.countByStatus(TenantStatus.INACTIVE),
+                tenantRepository.findTop5ByOrderByCreatedAtDesc().stream().map(this::toResponse).toList());
+    }
+
+    @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
     public TenantResponse getById(Long id) {
         return toResponse(findOrThrow(id));
     }
@@ -122,9 +155,8 @@ public class TenantService {
     public TenantResponse update(Long id, TenantRequest request) {
         Tenant tenant = findOrThrow(id);
 
-        if (!tenant.getCode().equals(request.code())
-                && tenantRepository.existsByCode(request.code())) {
-            throw new IllegalArgumentException("Tenant code already exists: " + request.code());
+        if (request.code() != null && !tenant.getCode().equalsIgnoreCase(request.code().trim())) {
+            throw new IllegalArgumentException("Tenant code cannot be changed because it identifies the tenant database and routing");
         }
         if (!tenant.getName().equals(request.name())
                 && tenantRepository.existsByName(request.name())) {
@@ -133,7 +165,6 @@ public class TenantService {
 
         // Update mutable profile fields only; database* fields are immutable once provisioned.
         tenant.setName(request.name());
-        tenant.setCode(request.code().toLowerCase().trim());
         tenant.setLogo(request.logo());
         tenant.setEmail(request.email());
         tenant.setWebsite(request.website());
@@ -152,6 +183,7 @@ public class TenantService {
         }
 
         Tenant saved = tenantRepository.save(tenant);
+        audit(saved.getId(), "UPDATED", "Tenant profile updated");
 
         // Sync the datasource pool with the new state.
         tenantDataSourceManager.removeTenant(saved.getId());
@@ -170,12 +202,36 @@ public class TenantService {
     }
 
     public void delete(Long id) {
-        if (!tenantRepository.existsById(id)) {
-            throw new IllegalArgumentException("Tenant not found: " + id);
+        Tenant tenant = findOrThrow(id);
+        Long currentTenantId = com.stackportal.tenant.context.TenantContext.getTenantId();
+        if (id.equals(currentTenantId) || tenant.getCode().equalsIgnoreCase(defaultTenantCode)) {
+            throw new IllegalStateException("The default tenant or the tenant that hosts the current platform session cannot be archived");
         }
-        tenantRepository.deleteById(id);
+        tenant.setStatus(TenantStatus.SUSPENDED);
+        tenantRepository.save(tenant);
         tenantDataSourceManager.removeTenant(id);
-        log.info("Tenant {} deleted and datasource pool closed", id);
+        audit(id, "ARCHIVED", "Tenant archived; its database was preserved");
+        log.info("Tenant {} archived and datasource pool closed", id);
+    }
+
+    public TenantResponse setStatus(Long id, TenantStatus status) {
+        if (status == null || status == TenantStatus.SUSPENDED) {
+            throw new IllegalArgumentException("Use archive to suspend a tenant");
+        }
+        Tenant tenant = findOrThrow(id);
+        tenant.setStatus(status);
+        Tenant saved = tenantRepository.save(tenant);
+        tenantDataSourceManager.removeTenant(id);
+        if (status == TenantStatus.ACTIVE) tenantDataSourceManager.registerTenant(saved);
+        audit(id, status == TenantStatus.ACTIVE ? "ACTIVATED" : "DEACTIVATED", "Tenant status changed");
+        return toResponse(saved);
+    }
+
+    private void audit(Long tenantId, String action, String detail) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String actor = authentication == null ? null : authentication.getName();
+        tenantAuditEventRepository.save(com.stackportal.entity.master.TenantAuditEvent.builder()
+                .tenantId(tenantId).action(action).actorEmail(actor).detail(detail).build());
     }
 
     // -----------------------------------------------------------------------

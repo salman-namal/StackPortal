@@ -3,6 +3,7 @@ package com.stackportal.dto.request.tenant;
 import com.stackportal.entity.master.TenantStatus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * Request payload for creating or updating a tenant.
@@ -21,6 +22,12 @@ public record TenantRequest(
 
         @NotBlank
         String code,
+
+        @Size(max = 150)
+        String adminName,
+
+        @Email
+        String adminEmail,
 
         String logo,
 

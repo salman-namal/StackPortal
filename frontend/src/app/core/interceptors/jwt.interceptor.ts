@@ -19,7 +19,8 @@ export class JwtInterceptor implements HttpInterceptor {
     if (token && !isPublicAuthRequest) {
       const cloned = req.clone({
         setHeaders: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          ...this.auth.tenantHeaders()
         }
       });
       return next.handle(cloned);

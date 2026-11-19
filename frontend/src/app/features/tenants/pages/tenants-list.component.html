@@ -55,7 +55,7 @@
       <div><dt>Phone</dt><dd>{{ viewingTenant.phone }}</dd></div>
       <div><dt>City</dt><dd>{{ viewingTenant.city }}</dd></div>
       <div><dt>Country</dt><dd>{{ viewingTenant.country }}</dd></div>
-      <div><dt>Status</dt><dd [class.active]="viewingTenant.active">{{ viewingTenant.active ? 'Active' : 'Inactive' }}</dd></div>
+      <div><dt>Status</dt><dd [class.active]="viewingTenant.status === 'ACTIVE'">{{ viewingTenant.status | lowercase }}</dd></div>
       <div><dt>Created</dt><dd>{{ viewingTenant.createdAt | date:'medium' }}</dd></div>
     </dl>
 

@@ -26,18 +26,19 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
     { key: 'phone', label: 'Phone' },
     { key: 'city', label: 'City' },
     { key: 'country', label: 'Country' },
-    { key: 'active', label: 'Status', sortable: true, badge: true, format: value => value ? 'Active' : 'Inactive' },
+    { key: 'status', label: 'Status', sortable: true, badge: true, format: value => String(value).toLowerCase() },
     { key: 'createdAt', label: 'Created Date', sortable: true, format: value => value ? new Date(String(value)).toLocaleDateString() : '—' }
   ];
 
   readonly actions: DataTableAction[] = [
     { key: 'view', label: 'View', icon: 'visibility' },
     { key: 'edit', label: 'Edit', icon: 'edit' },
+    { key: 'status', label: 'Activate / Deactivate', icon: 'visibility' },
     { key: 'delete', label: 'Delete', icon: 'delete', danger: true }
   ];
 
   filters: DataTableFilter[] = [
-    { key: 'active', label: 'Status', options: [{ label: 'Active', value: 'true' }, { label: 'Inactive', value: 'false' }] }
+    { key: 'status', label: 'Status', options: [{ label: 'Active', value: 'ACTIVE' }, { label: 'Inactive', value: 'INACTIVE' }] }
   ];
 
   rows: TenantRow[] = [];
@@ -53,7 +54,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
   search = '';
   sortBy = 'createdAt';
   sortDir: 'asc' | 'desc' = 'desc';
-  active?: boolean;
+  status?: 'ACTIVE' | 'INACTIVE';
 
   private readonly searchChanges = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
@@ -77,7 +78,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
   loadTenants(): void {
     this.loading = true;
     this.error = null;
-    this.tenantsService.list({ page: this.page, size: this.pageSize, search: this.search, sortBy: this.sortBy, sortDir: this.sortDir, active: this.active })
+    this.tenantsService.list({ page: this.page, size: this.pageSize, search: this.search, sortBy: this.sortBy, sortDir: this.sortDir, status: this.status })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: response => {
@@ -110,7 +111,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
 
   onFilterChange(change: DataTableFilterChange): void {
     const selected = change.value || undefined;
-    if (change.key === 'active') this.active = selected === undefined ? undefined : selected === 'true';
+    if (change.key === 'status') this.status = selected === 'ACTIVE' || selected === 'INACTIVE' ? selected : undefined;
     this.filters = this.filters.map(filter => filter.key === change.key ? { ...filter, selected: change.value } : filter);
     this.page = 0;
     this.loadTenants();
@@ -131,6 +132,17 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
     }
     if (event.key === 'edit') {
       this.router.navigate(['/admin/tenants/edit', id]);
+      return;
+    }
+    if (event.key === 'status') {
+      const tenant = event.row as unknown as TenantDto;
+      const nextStatus = tenant.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      if (window.confirm(`${nextStatus === 'ACTIVE' ? 'Activate' : 'Deactivate'} ${tenant.name}? Existing sessions will be rejected while inactive.`)) {
+        this.tenantsService.setStatus(id, nextStatus).pipe(takeUntil(this.destroy$)).subscribe({
+          next: () => { this.toast.success(`Tenant ${nextStatus === 'ACTIVE' ? 'activated' : 'deactivated'}.`); this.loadTenants(); },
+          error: error => this.toast.error(error.error?.message || 'Unable to update tenant status.')
+        });
+      }
       return;
     }
     if (event.key === 'delete') {

@@ -23,8 +23,8 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       { path: '', component: DashboardOverviewComponent, pathMatch: 'full' },
-      { path: 'users', loadComponent: () => import('./features/users/pages/users-list/dashboard-users.component').then((m) => m.DashboardUsersComponent) },
-      { path: 'tenants', loadComponent: () => import('./features/tenants/pages/tenants-list.component').then((m) => m.DashboardTenantsComponent) }
+      { path: 'users', loadComponent: () => import('./features/users/pages/users-list/dashboard-users.component').then((m) => m.DashboardUsersComponent), canActivate: [RoleGuard], data: { roles: ['ADMIN'] } },
+      { path: 'tenants', loadComponent: () => import('./features/tenants/pages/tenants-list.component').then((m) => m.DashboardTenantsComponent), canActivate: [RoleGuard], data: { roles: ['SUPER_ADMIN'] } }
     ]
   },
 

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "tenants")
@@ -27,6 +28,9 @@ public class Tenant {
 
     @Column(columnDefinition = "TEXT")
     private String logo;
+
+    @Column(name = "logo_id")
+    private UUID logoId;
 
     @Column(name = "admin_name", length = 100)
     private String adminName;

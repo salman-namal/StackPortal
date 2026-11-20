@@ -51,5 +51,5 @@ export class TenantsService {
 
 export interface TenantPayload {
   name: string; adminName: string; adminEmail: string; phone: string;
-  address?: string; city?: string; country?: string; website?: string; notes?: string; logo?: string;
+  address?: string; city?: string; country?: string; website?: string; notes?: string; logoId?: string;
 }

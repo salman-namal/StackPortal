@@ -4,6 +4,7 @@ import com.stackportal.entity.master.TenantStatus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 
 /**
  * Request payload for creating or updating a tenant.
@@ -26,7 +27,7 @@ public record TenantRequest(
         @Email
         String adminEmail,
 
-        String logo,
+        UUID logoId,
 
         @Email
         String email,

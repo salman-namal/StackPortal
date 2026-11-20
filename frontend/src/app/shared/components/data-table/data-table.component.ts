@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ImagePreviewComponent } from '../image-preview/image-preview.component';
 
 export interface DataTableColumn { key: string; label: string; sortable?: boolean; badge?: boolean; avatar?: boolean; format?: (value: unknown, row: Record<string, unknown>) => string; }
 export interface DataTableFilter { key: string; label: string; options: { label: string; value: string }[]; selected?: string; }
@@ -9,7 +10,7 @@ export interface DataTableSortChange { sortBy: string; sortDir: 'asc' | 'desc'; 
 export interface DataTableAction { key: string; label: string | ((row: Record<string, unknown>) => string); icon: string | ((row: Record<string, unknown>) => string); visible?: (row: Record<string, unknown>) => boolean; danger?: boolean; }
 export interface DataTableActionEvent { key: string; row: Record<string, unknown>; }
 
-@Component({ selector: 'app-data-table', standalone: true, imports: [CommonModule, FormsModule], templateUrl: './data-table.component.html', styleUrl: './data-table.component.scss' })
+@Component({ selector: 'app-data-table', standalone: true, imports: [CommonModule, FormsModule, ImagePreviewComponent], templateUrl: './data-table.component.html', styleUrl: './data-table.component.scss' })
 export class DataTableComponent implements OnChanges {
   @Input() columns: DataTableColumn[] = [];
   @Input() rows: Record<string, unknown>[] = [];

@@ -13,6 +13,7 @@ export interface TenantDto {
   notes?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   logo?: string;
+  logoId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

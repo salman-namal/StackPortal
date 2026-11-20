@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -204,6 +205,7 @@ public class TenantService {
         return toResponse(saved);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void delete(Long id, String confirmationName) {
         Tenant tenant = findOrThrow(id);
         Long currentTenantId = com.stackportal.tenant.context.TenantContext.getTenantId();
@@ -216,10 +218,17 @@ public class TenantService {
         // Persist INACTIVE first so no new tenant authentication or datasource can be created.
         tenant.setStatus(TenantStatus.INACTIVE);
         tenantRepository.save(tenant);
-        tenantDataSourceManager.removeTenant(id);
-        tenantDatabaseProvisioner.deleteTrustedDatabase(tenant.getDatabaseName(), tenant.getDatabaseUrl());
+        tenantDataSourceManager.removeTenant(id); // closes Hikari pool before pg_terminate_backend / DROP
+        try {
+            tenantDatabaseProvisioner.deleteTrustedDatabase(tenant.getDatabaseName(), tenant.getDatabaseUrl());
+        } catch (TenantProvisioningException ex) {
+            // The inactive master record remains deliberately, making a retry safe and preventing new access.
+            throw new TenantProvisioningException("Tenant deletion failed after deactivation; retry is safe: " + ex.getMessage(), ex);
+        }
+        java.util.UUID logoId = tenant.getLogoId();
         tenantRepository.delete(tenant);
-        audit(id, "DELETED", "Tenant database and master record permanently deleted");
+        mediaService.deleteIfUnreferenced(logoId);
+        audit(id, "DELETED", "Tenant database, master record, and unreferenced media deleted");
         log.info("Tenant {} permanently deleted", id);
     }
 

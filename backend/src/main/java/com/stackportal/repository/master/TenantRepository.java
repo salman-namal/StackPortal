@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface TenantRepository extends JpaRepository<Tenant, Long> {
 
@@ -18,6 +19,7 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
     boolean existsByCode(String code);
 
     boolean existsByName(String name);
+    boolean existsByLogoId(UUID logoId);
 
     List<Tenant> findByStatus(TenantStatus status);
     long countByStatus(TenantStatus status);

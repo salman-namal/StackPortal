@@ -101,9 +101,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleTenantProvisioningException(
             com.stackportal.common.exception.TenantProvisioningException ex) {
 
-        return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ApiResponse.fail("Tenant database provisioning failed: " + ex.getMessage()));
+        String operation = ex.getMessage() != null && ex.getMessage().toLowerCase().contains("delet")
+                ? "Tenant database deletion failed: "
+                : "Tenant database provisioning failed: ";
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.fail(operation + ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

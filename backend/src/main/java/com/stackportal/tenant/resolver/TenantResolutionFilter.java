@@ -34,7 +34,11 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return false;
+        String path = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        return path.startsWith(contextPath + "/api/tenants")
+                || path.startsWith(contextPath + "/api/auth/platform/")
+                || path.startsWith(contextPath + "/api/platform/");
     }
 
     @Override

@@ -2,13 +2,18 @@ export interface TenantDto {
   id: number;
   name: string;
   code: string;
+  adminName?: string;
+  adminEmail?: string;
   email?: string;
   website?: string;
   phone?: string;
   city?: string;
   country?: string;
+  address?: string;
+  notes?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   logo?: string;
+  logoId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

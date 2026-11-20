@@ -4,6 +4,7 @@ import com.stackportal.security.jwt.JwtService;
 import com.stackportal.service.user.UserService;
 import com.stackportal.tenant.context.TenantContext;
 import com.stackportal.repository.master.TenantRepository;
+import com.stackportal.repository.master.PlatformUserRepository;
 import com.stackportal.entity.master.Tenant;
 import com.stackportal.entity.master.TenantStatus;
 import java.util.Optional;
@@ -34,7 +35,7 @@ class JwtAuthenticationFilterTest {
         Tenant tenant = new Tenant();
         tenant.setStatus(TenantStatus.ACTIVE);
         when(tenantRepository.findById(42L)).thenReturn(Optional.of(tenant));
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, userService, tenantRepository);
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtService, userService, tenantRepository, mock(PlatformUserRepository.class));
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/users");
         request.addHeader("Authorization", "Bearer token");
         request.addHeader("X-Tenant-ID", "7");

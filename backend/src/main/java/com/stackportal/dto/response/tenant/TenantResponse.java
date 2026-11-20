@@ -3,6 +3,7 @@ package com.stackportal.dto.response.tenant;
 import com.stackportal.entity.master.TenantStatus;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Response payload returned from tenant endpoints.
@@ -16,12 +17,16 @@ public record TenantResponse(
         String name,
         String code,
         String logo,
+        UUID logoId,
+        String adminName,
+        String adminEmail,
         String email,
         String website,
         String phone,
         String address,
         String city,
         String country,
+        String notes,
         String databaseName,
         TenantStatus status,
         LocalDateTime createdAt,

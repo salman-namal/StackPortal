@@ -21,6 +21,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Locale;
+import java.security.SecureRandom;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 
 @Slf4j
@@ -28,12 +30,14 @@ import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 @RequiredArgsConstructor
 @Transactional(transactionManager = "masterTransactionManager")
 public class TenantService {
+    private static final SecureRandom CODE_RANDOM = new SecureRandom();
 
     private final TenantRepository            tenantRepository;
     private final TenantDataSourceManager     tenantDataSourceManager;
     private final TenantDatabaseProvisioner   tenantDatabaseProvisioner;
     private final TenantMigrationRunner       tenantMigrationRunner;
     private final TenantInitialAdminProvisioner tenantInitialAdminProvisioner;
+    private final MediaService mediaService;
     private final com.stackportal.repository.master.TenantAuditEventRepository tenantAuditEventRepository;
 
     @Value("${app.datasource.master.username}")
@@ -50,21 +54,20 @@ public class TenantService {
     // -----------------------------------------------------------------------
 
     public TenantResponse create(TenantRequest request) {
+        validateProfile(request);
         if (request.adminName() == null || request.adminName().isBlank()
                 || request.adminEmail() == null || request.adminEmail().isBlank()) {
             throw new IllegalArgumentException("An initial tenant administrator name and email are required");
         }
         // --- Business-rule checks ---
-        if (tenantRepository.existsByCode(request.code())) {
-            throw new IllegalArgumentException("Tenant code already exists: " + request.code());
-        }
         if (tenantRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("Tenant name already exists: " + request.name());
         }
+        String code = generateUniqueCode(request.name());
 
         // --- Auto-provision the physical database ---
         TenantDatabaseProvisioner.ProvisionResult provision =
-                tenantDatabaseProvisioner.provisionDatabase(request.code());
+                tenantDatabaseProvisioner.provisionDatabase(code);
 
         // Use master credentials unless the caller supplied a dedicated password.
         String dbPassword = (request.databasePassword() != null
@@ -83,19 +86,21 @@ public class TenantService {
         // --- Persist the tenant record ---
         Tenant tenant = Tenant.builder()
                 .name(request.name())
-                .code(request.code().toLowerCase().trim())
-                .logo(request.logo())
-                .email(request.email())
+                .code(code)
+                .logoId(validLogoId(request.logoId()))
+                .adminName(trimToNull(request.adminName()))
+                .email(normalizeEmail(request.adminEmail()))
                 .website(request.website())
                 .phone(request.phone())
                 .address(request.address())
                 .city(request.city())
                 .country(request.country())
+                .notes(trimToNull(request.notes()))
                 .databaseName(provision.databaseName())
                 .databaseUrl(provision.jdbcUrl())
                 .databaseUsername(masterUsername)
                 .databasePassword(dbPassword)
-                .status(request.status() != null ? request.status() : TenantStatus.ACTIVE)
+                .status(TenantStatus.ACTIVE)
                 .build();
 
         Tenant saved;
@@ -136,7 +141,7 @@ public class TenantService {
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
     public Page<TenantResponse> search(String search, TenantStatus status, Pageable pageable) {
         return tenantRepository.search(search == null ? "" : search.trim(), status, pageable)
-                .map(this::toResponse);
+                .map(this::toListResponse);
     }
 
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
@@ -154,10 +159,8 @@ public class TenantService {
 
     public TenantResponse update(Long id, TenantRequest request) {
         Tenant tenant = findOrThrow(id);
+        validateProfile(request);
 
-        if (request.code() != null && !tenant.getCode().equalsIgnoreCase(request.code().trim())) {
-            throw new IllegalArgumentException("Tenant code cannot be changed because it identifies the tenant database and routing");
-        }
         if (!tenant.getName().equals(request.name())
                 && tenantRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("Tenant name already exists: " + request.name());
@@ -165,24 +168,24 @@ public class TenantService {
 
         // Update mutable profile fields only; database* fields are immutable once provisioned.
         tenant.setName(request.name());
-        tenant.setLogo(request.logo());
-        tenant.setEmail(request.email());
+        java.util.UUID oldLogoId = tenant.getLogoId();
+        tenant.setLogoId(validLogoId(request.logoId()));
+        tenant.setAdminName(trimToNull(request.adminName()));
+        tenant.setEmail(normalizeEmail(request.adminEmail()));
         tenant.setWebsite(request.website());
         tenant.setPhone(request.phone());
         tenant.setAddress(request.address());
         tenant.setCity(request.city());
         tenant.setCountry(request.country());
+        tenant.setNotes(trimToNull(request.notes()));
 
         // Only update the password when a new one is explicitly supplied.
         if (request.databasePassword() != null && !request.databasePassword().isBlank()) {
             tenant.setDatabasePassword(request.databasePassword());
         }
 
-        if (request.status() != null) {
-            tenant.setStatus(request.status());
-        }
-
         Tenant saved = tenantRepository.save(tenant);
+        if (oldLogoId != null && !oldLogoId.equals(saved.getLogoId())) mediaService.deleteIfUnreferenced(oldLogoId);
         audit(saved.getId(), "UPDATED", "Tenant profile updated");
 
         // Sync the datasource pool with the new state.
@@ -201,22 +204,28 @@ public class TenantService {
         return toResponse(saved);
     }
 
-    public void delete(Long id) {
+    public void delete(Long id, String confirmationName) {
         Tenant tenant = findOrThrow(id);
         Long currentTenantId = com.stackportal.tenant.context.TenantContext.getTenantId();
         if (id.equals(currentTenantId) || tenant.getCode().equalsIgnoreCase(defaultTenantCode)) {
-            throw new IllegalStateException("The default tenant or the tenant that hosts the current platform session cannot be archived");
+            throw new IllegalStateException("Protected tenants cannot be deleted");
         }
-        tenant.setStatus(TenantStatus.SUSPENDED);
+        if (confirmationName == null || !tenant.getName().equals(confirmationName.trim())) {
+            throw new IllegalArgumentException("Type the exact tenant name to confirm permanent deletion");
+        }
+        // Persist INACTIVE first so no new tenant authentication or datasource can be created.
+        tenant.setStatus(TenantStatus.INACTIVE);
         tenantRepository.save(tenant);
         tenantDataSourceManager.removeTenant(id);
-        audit(id, "ARCHIVED", "Tenant archived; its database was preserved");
-        log.info("Tenant {} archived and datasource pool closed", id);
+        tenantDatabaseProvisioner.deleteTrustedDatabase(tenant.getDatabaseName(), tenant.getDatabaseUrl());
+        tenantRepository.delete(tenant);
+        audit(id, "DELETED", "Tenant database and master record permanently deleted");
+        log.info("Tenant {} permanently deleted", id);
     }
 
     public TenantResponse setStatus(Long id, TenantStatus status) {
-        if (status == null || status == TenantStatus.SUSPENDED) {
-            throw new IllegalArgumentException("Use archive to suspend a tenant");
+        if (status == null) {
+            throw new IllegalArgumentException("Tenant status is required");
         }
         Tenant tenant = findOrThrow(id);
         tenant.setStatus(status);
@@ -243,22 +252,75 @@ public class TenantService {
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + id));
     }
 
+    /** Generates a lowercase URL-safe identifier, adding a random suffix on collisions. */
+    private String generateUniqueCode(String tenantName) {
+        String base = tenantName == null ? "tenant" : tenantName.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+        if (base.isBlank()) base = "tenant";
+        base = base.substring(0, Math.min(42, base.length()));
+        String candidate = base;
+        for (int attempt = 0; attempt < 20; attempt++) {
+            if (!tenantRepository.existsByCode(candidate)) return candidate;
+            candidate = base.substring(0, Math.min(42, base.length())) + "-" + Long.toUnsignedString(CODE_RANDOM.nextLong(), 36).substring(0, 6);
+        }
+        throw new IllegalStateException("Unable to allocate a unique tenant code");
+    }
+
     private TenantResponse toResponse(Tenant tenant) {
         return new TenantResponse(
                 tenant.getId(),
                 tenant.getName(),
                 tenant.getCode(),
                 tenant.getLogo(),
+                tenant.getLogoId(),
+                tenant.getAdminName(),
+                tenant.getEmail(),
                 tenant.getEmail(),
                 tenant.getWebsite(),
                 tenant.getPhone(),
                 tenant.getAddress(),
                 tenant.getCity(),
                 tenant.getCountry(),
+                tenant.getNotes(),
                 tenant.getDatabaseName(),
                 tenant.getStatus(),
                 tenant.getCreatedAt(),
                 tenant.getUpdatedAt()
         );
     }
+
+    /** List responses deliberately omit large data URLs; the detail endpoint returns the full saved logo. */
+    private TenantResponse toListResponse(Tenant tenant) {
+        TenantResponse response = toResponse(tenant);
+        String logo = response.logo();
+        if (logo != null && logo.startsWith("data:") && logo.length() > 100_000) {
+            return new TenantResponse(response.id(), response.name(), response.code(), null, response.logoId(),
+                    response.adminName(), response.adminEmail(), response.email(), response.website(), response.phone(),
+                    response.address(), response.city(), response.country(), response.notes(), response.databaseName(),
+                    response.status(), response.createdAt(), response.updatedAt());
+        }
+        return response;
+    }
+
+    private void validateProfile(TenantRequest request) {
+        if (request.name() == null || request.name().trim().length() < 3 || request.name().trim().length() > 100) {
+            throw new IllegalArgumentException("Tenant name must be between 3 and 100 characters");
+        }
+        if (request.adminName() == null || request.adminName().trim().length() < 3 || request.adminName().trim().length() > 100) {
+            throw new IllegalArgumentException("Administrator name must be between 3 and 100 characters");
+        }
+        if (request.adminEmail() == null || request.adminEmail().isBlank()) {
+            throw new IllegalArgumentException("Administrator email is required");
+        }
+        if (request.website() != null && !request.website().isBlank() && !request.website().trim().matches("https?://.+")) {
+            throw new IllegalArgumentException("Website must be a valid HTTP or HTTPS URL");
+        }
+        if (request.logoId() != null && !mediaService.exists(request.logoId())) throw new IllegalArgumentException("Selected logo was not found");
+    }
+
+    private java.util.UUID validLogoId(java.util.UUID id) { if (id != null && !mediaService.exists(id)) throw new IllegalArgumentException("Selected logo was not found"); return id; }
+
+    private String trimToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private String normalizeEmail(String value) { return value == null ? null : value.trim().toLowerCase(Locale.ROOT); }
 }

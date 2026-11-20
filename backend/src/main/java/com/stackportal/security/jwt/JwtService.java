@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Service
+@Slf4j
 public class JwtService {
 
     @Value("${jwt.secret}")
@@ -70,6 +72,15 @@ public class JwtService {
         return null;
     }
 
+    /**
+     * Returns the authentication scope carried by a token.  Platform tokens
+     * deliberately have no tenant id, while tenant tokens have a tenant id.
+     */
+    public String getScopeFromToken(String token) {
+        Object scope = extractClaim(token, claims -> claims.get("scope"));
+        return scope == null ? null : scope.toString();
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -97,7 +108,19 @@ public class JwtService {
     }
 
     private Key getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secret);
+        } catch (IllegalArgumentException ex) {
+            // Existing local installations may use a raw, high-entropy value
+            // rather than a Base64-encoded value. Keep that configuration
+            // compatible without logging the secret itself.
+            keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            log.warn("JWT secret is not Base64 encoded; using its raw UTF-8 bytes");
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT secret must contain at least 256 bits of key material");
+        }
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

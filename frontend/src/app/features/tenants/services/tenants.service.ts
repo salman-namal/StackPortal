@@ -26,8 +26,8 @@ export class TenantsService {
     return this.http.get<ApiResponse<PageResponse<TenantDto>>>(this.tenantsUrl, { params });
   }
 
-  delete(id: number) {
-    return this.http.delete<ApiResponse<void>>(`${this.tenantsUrl}/${id}`);
+  delete(id: number, tenantName: string) {
+    return this.http.delete<ApiResponse<void>>(`${this.tenantsUrl}/${id}`, { body: { tenantName } });
   }
 
   get(id: number) {
@@ -36,15 +36,20 @@ export class TenantsService {
 
   dashboard() { return this.http.get<ApiResponse<TenantDashboard>>(`${this.tenantsUrl}/dashboard`); }
 
-  create(payload: { name: string; code: string; adminName: string; adminEmail: string; email?: string; website?: string; phone?: string; city?: string; country?: string; status?: 'ACTIVE' | 'INACTIVE'; logo?: string }) {
+  create(payload: TenantPayload) {
     return this.http.post<ApiResponse<TenantDto>>(this.tenantsUrl, payload);
   }
 
-  update(id: number, payload: { name: string; code: string; email?: string; website?: string; phone?: string; city?: string; country?: string; status?: 'ACTIVE' | 'INACTIVE'; logo?: string }) {
+  update(id: number, payload: TenantPayload) {
     return this.http.put<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}`, payload);
   }
 
   setStatus(id: number, status: 'ACTIVE' | 'INACTIVE') {
     return this.http.patch<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}/status`, {}, { params: new HttpParams().set('status', status) });
   }
+}
+
+export interface TenantPayload {
+  name: string; adminName: string; adminEmail: string; phone: string;
+  address?: string; city?: string; country?: string; website?: string; notes?: string; logoId?: string;
 }

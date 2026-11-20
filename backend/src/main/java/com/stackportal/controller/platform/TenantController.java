@@ -2,9 +2,12 @@ package com.stackportal.controller.platform;
 
 import com.stackportal.common.response.ApiResponse;
 import com.stackportal.dto.request.tenant.TenantRequest;
+import com.stackportal.dto.request.tenant.TenantDeletionRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 import com.stackportal.service.platform.TenantService;
+import com.stackportal.service.platform.TenantLogoStorageService;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +34,12 @@ import java.util.List;
 public class TenantController {
 
     private final TenantService tenantService;
+    private final TenantLogoStorageService tenantLogoStorageService;
+
+    @PostMapping(value = "/logo", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<String>> uploadLogo(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Tenant logo uploaded", tenantLogoStorageService.store(file)));
+    }
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<TenantDashboardResponse>> dashboard() {
@@ -87,9 +96,10 @@ public class TenantController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id,
+                                                    @Valid @RequestBody TenantDeletionRequest request) {
 
-        tenantService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok("Tenant archived successfully; its database was preserved", null));
+        tenantService.delete(id, request.tenantName());
+        return ResponseEntity.ok(ApiResponse.ok("Tenant permanently deleted", null));
     }
 }

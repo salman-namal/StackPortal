@@ -7,6 +7,7 @@ import { TenantsService } from '../services/tenants.service';
 import { PageResponse } from '../../../core/models/api-response.models';
 import { TenantDto } from '../models/tenant.models';
 import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmationDialogService } from '../../../shared/components/confirmation-dialog/confirmation-dialog.service';
 
 type TenantRow = TenantDto & Record<string, unknown>;
 
@@ -56,7 +57,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
   private readonly searchChanges = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
 
-  constructor(private tenantsService: TenantsService, private router: Router, private toast: ToastService) {}
+  constructor(private tenantsService: TenantsService, private router: Router, private toast: ToastService, private confirmation: ConfirmationDialogService) {}
 
   ngOnInit(): void {
     this.searchChanges.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$)).subscribe(search => {
@@ -83,7 +84,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
           // Remove sensitive DB fields if present
           this.rows = (result.content as TenantRow[]).map(r => {
             const { databaseName, databaseUrl, databaseUsername, databasePassword, ...rest } = r as any;
-            return rest as TenantRow;
+            return { ...rest, logoUrl: r.logo } as TenantRow;
           });
           this.page = result.number ?? this.page;
           this.pageSize = result.size;
@@ -116,7 +117,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
 
   onCreate(): void { this.router.navigate(['/dashboard/tenants/create']); }
 
-  onAction(event: DataTableActionEvent): void {
+  async onAction(event: DataTableActionEvent): Promise<void> {
     const id = Number(event.row['id']);
     if (!Number.isFinite(id)) return;
 
@@ -128,7 +129,8 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
     if (event.key === 'status') {
       const tenant = event.row as unknown as TenantDto;
       const nextStatus = tenant.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      if (window.confirm(`${nextStatus === 'ACTIVE' ? 'Activate' : 'Deactivate'} ${tenant.name}? Existing sessions will be rejected while inactive.`)) {
+      const confirmed = await this.confirmation.confirm({ type: nextStatus === 'ACTIVE' ? 'success' : 'warning', title: `${nextStatus === 'ACTIVE' ? 'Activate' : 'Deactivate'} Tenant?`, message: nextStatus === 'ACTIVE' ? 'Are you sure you want to activate this tenant?' : 'All users belonging to this tenant will lose access until it is reactivated.', confirmText: `Yes, ${nextStatus === 'ACTIVE' ? 'Activate' : 'Deactivate'}` });
+      if (confirmed) {
         this.tenantsService.setStatus(id, nextStatus).pipe(takeUntil(this.destroy$)).subscribe({
           next: () => { this.toast.success(`Tenant ${nextStatus === 'ACTIVE' ? 'activated' : 'deactivated'}.`); this.loadTenants(); },
           error: error => this.toast.error(error.error?.message || 'Unable to update tenant status.')
@@ -138,8 +140,8 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
     }
     if (event.key === 'delete') {
       const name = String(event.row['name'] ?? '');
-      const confirmation = window.prompt(`Permanent deletion cannot be undone. Type "${name}" to delete this tenant.`);
-      if (confirmation === name) this.deleteTenants([{ id, name }]);
+      const confirmed = await this.confirmation.confirm({ type: 'danger', title: 'Delete Tenant Permanently?', message: 'This will permanently delete the tenant, its database, users, and associated resources. This action cannot be undone.', confirmText: 'Yes, Delete', requiredText: name });
+      if (confirmed) this.deleteTenants([{ id, name }]);
       return;
     }
   }

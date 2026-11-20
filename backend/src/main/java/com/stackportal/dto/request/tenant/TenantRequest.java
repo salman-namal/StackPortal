@@ -26,20 +26,22 @@ public record TenantRequest(
         @Email
         String adminEmail,
 
-        @Size(max = 255, message = "Logo reference is too long") String logo,
+        String logo,
 
         @Email
         String email,
 
-        String website,
+        @Size(max = 255, message = "Website must not exceed 255 characters") String website,
 
         String phone,
 
-        String address,
+        @Size(max = 500, message = "Address must not exceed 500 characters") String address,
 
-        String city,
+        @Size(max = 100, message = "City must not exceed 100 characters") String city,
 
-        String country,
+        @Size(max = 100, message = "Country must not exceed 100 characters") String country,
+
+        @Size(max = 1000, message = "Notes must not exceed 1000 characters") String notes,
 
         /**
          * Optional password for the tenant database user.

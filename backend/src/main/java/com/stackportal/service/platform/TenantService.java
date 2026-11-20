@@ -23,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
 import java.util.Locale;
 import java.security.SecureRandom;
+import java.util.Base64;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 
 @Slf4j
@@ -53,6 +54,7 @@ public class TenantService {
     // -----------------------------------------------------------------------
 
     public TenantResponse create(TenantRequest request) {
+        validateProfile(request);
         if (request.adminName() == null || request.adminName().isBlank()
                 || request.adminEmail() == null || request.adminEmail().isBlank()) {
             throw new IllegalArgumentException("An initial tenant administrator name and email are required");
@@ -86,12 +88,14 @@ public class TenantService {
                 .name(request.name())
                 .code(code)
                 .logo(request.logo())
-                .email(request.email())
+                .adminName(trimToNull(request.adminName()))
+                .email(normalizeEmail(request.adminEmail()))
                 .website(request.website())
                 .phone(request.phone())
                 .address(request.address())
                 .city(request.city())
                 .country(request.country())
+                .notes(trimToNull(request.notes()))
                 .databaseName(provision.databaseName())
                 .databaseUrl(provision.jdbcUrl())
                 .databaseUsername(masterUsername)
@@ -137,7 +141,7 @@ public class TenantService {
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
     public Page<TenantResponse> search(String search, TenantStatus status, Pageable pageable) {
         return tenantRepository.search(search == null ? "" : search.trim(), status, pageable)
-                .map(this::toResponse);
+                .map(this::toListResponse);
     }
 
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
@@ -155,6 +159,7 @@ public class TenantService {
 
     public TenantResponse update(Long id, TenantRequest request) {
         Tenant tenant = findOrThrow(id);
+        validateProfile(request);
 
         if (!tenant.getName().equals(request.name())
                 && tenantRepository.existsByName(request.name())) {
@@ -164,12 +169,14 @@ public class TenantService {
         // Update mutable profile fields only; database* fields are immutable once provisioned.
         tenant.setName(request.name());
         tenant.setLogo(request.logo());
-        tenant.setEmail(request.email());
+        tenant.setAdminName(trimToNull(request.adminName()));
+        tenant.setEmail(normalizeEmail(request.adminEmail()));
         tenant.setWebsite(request.website());
         tenant.setPhone(request.phone());
         tenant.setAddress(request.address());
         tenant.setCity(request.city());
         tenant.setCountry(request.country());
+        tenant.setNotes(trimToNull(request.notes()));
 
         // Only update the password when a new one is explicitly supplied.
         if (request.databasePassword() != null && !request.databasePassword().isBlank()) {
@@ -264,16 +271,73 @@ public class TenantService {
                 tenant.getName(),
                 tenant.getCode(),
                 tenant.getLogo(),
+                tenant.getAdminName(),
+                tenant.getEmail(),
                 tenant.getEmail(),
                 tenant.getWebsite(),
                 tenant.getPhone(),
                 tenant.getAddress(),
                 tenant.getCity(),
                 tenant.getCountry(),
+                tenant.getNotes(),
                 tenant.getDatabaseName(),
                 tenant.getStatus(),
                 tenant.getCreatedAt(),
                 tenant.getUpdatedAt()
         );
     }
+
+    /** List responses deliberately omit large data URLs; the detail endpoint returns the full saved logo. */
+    private TenantResponse toListResponse(Tenant tenant) {
+        TenantResponse response = toResponse(tenant);
+        String logo = response.logo();
+        if (logo != null && logo.startsWith("data:") && logo.length() > 100_000) {
+            return new TenantResponse(response.id(), response.name(), response.code(), null,
+                    response.adminName(), response.adminEmail(), response.email(), response.website(), response.phone(),
+                    response.address(), response.city(), response.country(), response.notes(), response.databaseName(),
+                    response.status(), response.createdAt(), response.updatedAt());
+        }
+        return response;
+    }
+
+    private void validateProfile(TenantRequest request) {
+        if (request.name() == null || request.name().trim().length() < 3 || request.name().trim().length() > 100) {
+            throw new IllegalArgumentException("Tenant name must be between 3 and 100 characters");
+        }
+        if (request.adminName() == null || request.adminName().trim().length() < 3 || request.adminName().trim().length() > 100) {
+            throw new IllegalArgumentException("Administrator name must be between 3 and 100 characters");
+        }
+        if (request.adminEmail() == null || request.adminEmail().isBlank()) {
+            throw new IllegalArgumentException("Administrator email is required");
+        }
+        if (request.website() != null && !request.website().isBlank() && !request.website().trim().matches("https?://.+")) {
+            throw new IllegalArgumentException("Website must be a valid HTTP or HTTPS URL");
+        }
+        validateLogo(request.logo());
+    }
+
+    private void validateLogo(String logo) {
+        if (logo == null || logo.isBlank() || !logo.startsWith("data:")) return; // preserve legacy URL/path values
+        int separator = logo.indexOf(",");
+        if (separator < 0 || !logo.substring(0, separator).matches("data:image/(jpeg|png|webp);base64")) {
+            throw new IllegalArgumentException("Logo must be a JPG, PNG, or WebP Base64 image");
+        }
+        try {
+            byte[] content = Base64.getDecoder().decode(logo.substring(separator + 1));
+            if (content.length > 2 * 1024 * 1024 || !hasSupportedImageSignature(content)) {
+                throw new IllegalArgumentException("Logo must be a valid JPG, PNG, or WebP image no larger than 2 MB");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Logo must be a valid JPG, PNG, or WebP image no larger than 2 MB");
+        }
+    }
+
+    private boolean hasSupportedImageSignature(byte[] bytes) {
+        return bytes.length >= 12 && ((bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xD8 && bytes[2] == (byte) 0xFF)
+                || (bytes[0] == (byte) 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                || (bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F' && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P'));
+    }
+
+    private String trimToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private String normalizeEmail(String value) { return value == null ? null : value.trim().toLowerCase(Locale.ROOT); }
 }

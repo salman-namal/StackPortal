@@ -8,6 +8,7 @@ import { AppComponent } from './app.component';
 import { JwtInterceptor } from './core/interceptors/jwt.interceptor';
 import { ErrorInterceptor } from './core/interceptors/error.interceptor';
 import { ToastHostComponent } from './shared/components/toast-host/toast-host.component';
+import { ConfirmationDialogComponent } from './shared/components/confirmation-dialog/confirmation-dialog.component';
 
 @NgModule({
   declarations: [AppComponent],
@@ -17,7 +18,8 @@ import { ToastHostComponent } from './shared/components/toast-host/toast-host.co
     FormsModule,
     ReactiveFormsModule,
     AppRoutingModule,
-    ToastHostComponent
+    ToastHostComponent,
+    ConfirmationDialogComponent
   ],
   providers: [
     {

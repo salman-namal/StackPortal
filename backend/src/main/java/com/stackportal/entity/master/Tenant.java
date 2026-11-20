@@ -25,8 +25,11 @@ public class Tenant {
     @Column(nullable = false, unique = true, length = 50)
     private String code;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "TEXT")
     private String logo;
+
+    @Column(name = "admin_name", length = 100)
+    private String adminName;
 
     @Column(length = 150)
     private String email;
@@ -45,6 +48,9 @@ public class Tenant {
 
     @Column(length = 100)
     private String country;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     // Tenant database information
     @Column(name = "database_name", nullable = false, unique = true)

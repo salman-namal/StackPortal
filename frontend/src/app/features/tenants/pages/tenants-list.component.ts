@@ -114,21 +114,15 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
     this.loadTenants();
   }
 
-  onCreate(): void { this.router.navigate(['/admin/tenants/create']); }
+  onCreate(): void { this.router.navigate(['/dashboard/tenants/create']); }
 
   onAction(event: DataTableActionEvent): void {
     const id = Number(event.row['id']);
     if (!Number.isFinite(id)) return;
 
-    if (event.key === 'view') {
-      this.tenantsService.get(id).pipe(takeUntil(this.destroy$)).subscribe({
-        next: response => this.viewingTenant = response.data,
-        error: error => this.toast.error(error.error?.message || 'Unable to load tenant details.')
-      });
-      return;
-    }
+    if (event.key === 'view') { this.router.navigate(['/dashboard/tenants/view', id]); return; }
     if (event.key === 'edit') {
-      this.router.navigate(['/admin/tenants/edit', id]);
+      this.router.navigate(['/dashboard/tenants/edit', id]);
       return;
     }
     if (event.key === 'status') {

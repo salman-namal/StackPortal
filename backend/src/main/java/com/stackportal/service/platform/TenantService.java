@@ -21,6 +21,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Locale;
+import java.security.SecureRandom;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 
 @Slf4j
@@ -28,6 +30,7 @@ import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 @RequiredArgsConstructor
 @Transactional(transactionManager = "masterTransactionManager")
 public class TenantService {
+    private static final SecureRandom CODE_RANDOM = new SecureRandom();
 
     private final TenantRepository            tenantRepository;
     private final TenantDataSourceManager     tenantDataSourceManager;
@@ -55,16 +58,14 @@ public class TenantService {
             throw new IllegalArgumentException("An initial tenant administrator name and email are required");
         }
         // --- Business-rule checks ---
-        if (tenantRepository.existsByCode(request.code())) {
-            throw new IllegalArgumentException("Tenant code already exists: " + request.code());
-        }
         if (tenantRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("Tenant name already exists: " + request.name());
         }
+        String code = generateUniqueCode(request.name());
 
         // --- Auto-provision the physical database ---
         TenantDatabaseProvisioner.ProvisionResult provision =
-                tenantDatabaseProvisioner.provisionDatabase(request.code());
+                tenantDatabaseProvisioner.provisionDatabase(code);
 
         // Use master credentials unless the caller supplied a dedicated password.
         String dbPassword = (request.databasePassword() != null
@@ -83,7 +84,7 @@ public class TenantService {
         // --- Persist the tenant record ---
         Tenant tenant = Tenant.builder()
                 .name(request.name())
-                .code(request.code().toLowerCase().trim())
+                .code(code)
                 .logo(request.logo())
                 .email(request.email())
                 .website(request.website())
@@ -155,9 +156,6 @@ public class TenantService {
     public TenantResponse update(Long id, TenantRequest request) {
         Tenant tenant = findOrThrow(id);
 
-        if (request.code() != null && !tenant.getCode().equalsIgnoreCase(request.code().trim())) {
-            throw new IllegalArgumentException("Tenant code cannot be changed because it identifies the tenant database and routing");
-        }
         if (!tenant.getName().equals(request.name())
                 && tenantRepository.existsByName(request.name())) {
             throw new IllegalArgumentException("Tenant name already exists: " + request.name());
@@ -243,6 +241,21 @@ public class TenantService {
     private Tenant findOrThrow(Long id) {
         return tenantRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + id));
+    }
+
+    /** Generates a lowercase URL-safe identifier, adding a random suffix on collisions. */
+    private String generateUniqueCode(String tenantName) {
+        String base = tenantName == null ? "tenant" : tenantName.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
+        if (base.isBlank()) base = "tenant";
+        base = base.substring(0, Math.min(42, base.length()));
+        String candidate = base;
+        for (int attempt = 0; attempt < 20; attempt++) {
+            if (!tenantRepository.existsByCode(candidate)) return candidate;
+            candidate = base.substring(0, Math.min(42, base.length())) + "-" + Long.toUnsignedString(CODE_RANDOM.nextLong(), 36).substring(0, 6);
+        }
+        throw new IllegalStateException("Unable to allocate a unique tenant code");
     }
 
     private TenantResponse toResponse(Tenant tenant) {

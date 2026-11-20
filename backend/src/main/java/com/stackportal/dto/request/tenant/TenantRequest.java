@@ -20,16 +20,13 @@ public record TenantRequest(
         @NotBlank
         String name,
 
-        @NotBlank
-        String code,
-
         @Size(max = 150)
         String adminName,
 
         @Email
         String adminEmail,
 
-        String logo,
+        @Size(max = 255, message = "Logo reference is too long") String logo,
 
         @Email
         String email,

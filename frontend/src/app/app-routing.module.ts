@@ -24,7 +24,10 @@ const routes: Routes = [
     children: [
       { path: '', component: DashboardOverviewComponent, pathMatch: 'full' },
       { path: 'users', loadComponent: () => import('./features/users/pages/users-list/dashboard-users.component').then((m) => m.DashboardUsersComponent), canActivate: [RoleGuard], data: { roles: ['ADMIN'] } },
-      { path: 'tenants', loadComponent: () => import('./features/tenants/pages/tenants-list.component').then((m) => m.DashboardTenantsComponent), canActivate: [RoleGuard], data: { roles: ['SUPER_ADMIN'] } }
+      { path: 'tenants/create', loadComponent: () => import('./features/tenants/pages/tenant-form.component').then((m) => m.TenantFormComponent), canActivate: [RoleGuard], data: { roles: ['SUPER_ADMIN'] } },
+      { path: 'tenants/edit/:id', loadComponent: () => import('./features/tenants/pages/tenant-form.component').then((m) => m.TenantFormComponent), canActivate: [RoleGuard], data: { roles: ['SUPER_ADMIN'] } },
+      { path: 'tenants/view/:id', loadComponent: () => import('./features/tenants/pages/tenant-form.component').then((m) => m.TenantFormComponent), canActivate: [RoleGuard], data: { roles: ['SUPER_ADMIN'], readOnly: true } },
+      { path: 'tenants', pathMatch: 'full', loadComponent: () => import('./features/tenants/pages/tenants-list.component').then((m) => m.DashboardTenantsComponent), canActivate: [RoleGuard], data: { roles: ['SUPER_ADMIN'] } }
     ]
   },
 

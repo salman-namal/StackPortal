@@ -6,6 +6,8 @@ import com.stackportal.dto.request.tenant.TenantDeletionRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 import com.stackportal.service.platform.TenantService;
+import com.stackportal.service.platform.TenantLogoStorageService;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,12 @@ import java.util.List;
 public class TenantController {
 
     private final TenantService tenantService;
+    private final TenantLogoStorageService tenantLogoStorageService;
+
+    @PostMapping(value = "/logo", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<String>> uploadLogo(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Tenant logo uploaded", tenantLogoStorageService.store(file)));
+    }
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<TenantDashboardResponse>> dashboard() {

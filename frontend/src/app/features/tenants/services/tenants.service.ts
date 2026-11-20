@@ -36,11 +36,12 @@ export class TenantsService {
 
   dashboard() { return this.http.get<ApiResponse<TenantDashboard>>(`${this.tenantsUrl}/dashboard`); }
 
-  create(payload: { name: string; code: string; adminName: string; adminEmail: string; email?: string; website?: string; phone?: string; city?: string; country?: string; status?: 'ACTIVE' | 'INACTIVE'; logo?: string }) {
+  create(payload: { name: string; adminName: string; adminEmail: string; email?: string; phone?: string; logo?: string }) {
     return this.http.post<ApiResponse<TenantDto>>(this.tenantsUrl, payload);
   }
+  uploadLogo(file: File): Observable<ApiResponse<string>> { const data = new FormData(); data.append('file', file); return this.http.post<ApiResponse<string>>(`${this.tenantsUrl}/logo`, data); }
 
-  update(id: number, payload: { name: string; code: string; email?: string; website?: string; phone?: string; city?: string; country?: string; status?: 'ACTIVE' | 'INACTIVE'; logo?: string }) {
+  update(id: number, payload: { name: string; email?: string; phone?: string; logo?: string }) {
     return this.http.put<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}`, payload);
   }
 

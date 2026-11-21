@@ -2,6 +2,8 @@ export interface TenantDto {
   id: number;
   name: string;
   code: string;
+  /** Generated tenant-specific sign-in URL (platform-managed; read-only). */
+  loginUrl?: string;
   adminName?: string;
   adminEmail?: string;
   email?: string;

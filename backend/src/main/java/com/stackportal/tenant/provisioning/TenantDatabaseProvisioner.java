@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
@@ -83,14 +85,18 @@ public class TenantDatabaseProvisioner {
         if (databaseName == null || !databaseName.matches("tenant_[a-z0-9_]{1,56}")) {
             throw new TenantProvisioningException("Refusing to delete an unsafe tenant database identifier");
         }
-        if (trustedJdbcUrl == null || !trustedJdbcUrl.endsWith("/" + databaseName)) {
+        if (trustedJdbcUrl == null || !trustedJdbcUrl.matches("^jdbc:postgresql://[^/]+/" + java.util.regex.Pattern.quote(databaseName) + "(?:\\?.*)?$")) {
             throw new TenantProvisioningException("Tenant database metadata does not match its trusted identifier");
         }
-        try (Connection conn = masterDataSource.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = openAdministrativeConnection()) {
             conn.setAutoCommit(true);
-            stmt.executeUpdate("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                    + "WHERE datname = '" + databaseName + "' AND pid <> pg_backend_pid()");
-            stmt.executeUpdate("DROP DATABASE \"" + databaseName + "\"");
+            try (PreparedStatement terminate = conn.prepareStatement("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = ? AND pid <> pg_backend_pid()")) {
+                terminate.setString(1, databaseName);
+                try (ResultSet ignored = terminate.executeQuery()) { while (ignored.next()) { /* consume returned rows */ } }
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("DROP DATABASE IF EXISTS " + quoteIdentifier(databaseName) + " WITH (FORCE)");
+            }
             log.info("Tenant database '{}' deleted", databaseName);
         } catch (Exception ex) {
             throw new TenantProvisioningException("Failed to delete tenant database '" + databaseName + "': " + ex.getMessage(), ex);
@@ -187,16 +193,14 @@ public class TenantDatabaseProvisioner {
 
     /** Drops a database that was created during a failed provisioning attempt. */
     private void cleanupDatabase(String dbName) {
-        try (Connection conn = masterDataSource.getConnection()) {
+        try (Connection conn = openAdministrativeConnection()) {
             conn.setAutoCommit(true);
             // Terminate existing connections first (PostgreSQL requires this)
             try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate(
-                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity " +
-                        "WHERE datname = '" + dbName + "' AND pid <> pg_backend_pid()");
+                try (ResultSet ignored = stmt.executeQuery("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '" + dbName + "' AND pid <> pg_backend_pid()")) { while (ignored.next()) { } }
             }
             try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate("DROP DATABASE IF EXISTS \"" + dbName + "\"");
+                stmt.executeUpdate("DROP DATABASE IF EXISTS " + quoteIdentifier(dbName) + " WITH (FORCE)");
                 log.info("Cleaned up orphaned database '{}'", dbName);
             }
         } catch (Exception ex) {
@@ -204,6 +208,21 @@ public class TenantDatabaseProvisioner {
                     dbName, ex.getMessage());
         }
     }
+
+    /** Uses the server's administrative postgres database so tenant DROP DATABASE never shares a tenant transaction. */
+    private Connection openAdministrativeConnection() throws Exception {
+        try (Connection master = masterDataSource.getConnection()) {
+            String url = master.getMetaData().getURL();
+            int slash = url.lastIndexOf('/');
+            int query = url.indexOf('?', slash);
+            String adminUrl = url.substring(0, slash + 1) + "postgres" + (query >= 0 ? url.substring(query) : "");
+            Connection connection = DriverManager.getConnection(adminUrl, masterUsername, masterPassword);
+            connection.setAutoCommit(true);
+            return connection;
+        }
+    }
+
+    private String quoteIdentifier(String value) { return "\"" + value.replace("\"", "\"\"") + "\""; }
 
     /** Builds a minimal single-connection HikariCP DataSource for schema ops. */
     private HikariDataSource buildTempDataSource(String jdbcUrl) {

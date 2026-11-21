@@ -148,9 +148,17 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
 
   closeView(): void { this.viewingTenant = null; }
 
-  onBulkDelete(rows: Record<string, unknown>[]): void {
-    const ids = rows.map(row => Number(row['id'])).filter(Number.isFinite);
-    if (ids.length) this.toast.error('Bulk permanent deletion is not supported. Delete tenants one at a time.');
+  async onBulkDelete(rows: Record<string, unknown>[]): Promise<void> {
+    const tenants = rows.map(row => ({ id: Number(row['id']), name: String(row['name'] ?? '') }))
+      .filter(tenant => Number.isFinite(tenant.id) && tenant.name);
+    if (!tenants.length) return;
+    const confirmed = await this.confirmation.confirm({
+      type: 'danger',
+      title: `Delete ${tenants.length} tenant${tenants.length === 1 ? '' : 's'} permanently?`,
+      message: 'This permanently deletes the selected tenants, their databases, users, and unreferenced media. This action cannot be undone.',
+      confirmText: `Yes, Delete ${tenants.length}`
+    });
+    if (confirmed) this.deleteTenants(tenants);
   }
 
   private deleteTenants(tenants: { id: number; name: string }[]): void {
@@ -161,7 +169,7 @@ export class DashboardTenantsComponent implements OnInit, OnDestroy {
         this.loadTenants();
       },
       error: error => {
-        this.toast.error(error.error?.message || 'Unable to delete tenant.');
+        this.toast.error(error.error?.message || 'One or more tenants could not be deleted. Deleted tenants will not be restored.');
         this.loadTenants();
       }
     });

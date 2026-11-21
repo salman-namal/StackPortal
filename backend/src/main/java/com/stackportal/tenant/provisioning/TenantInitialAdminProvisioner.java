@@ -28,7 +28,7 @@ public class TenantInitialAdminProvisioner {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    public void provision(String jdbcUrl, String databaseUsername, String databasePassword,
+    public InitialAdminInvitation provision(String jdbcUrl, String databaseUsername, String databasePassword,
                           String name, String email) {
         String username = usernameFromEmail(email);
         String temporaryPassword = temporaryPassword();
@@ -64,12 +64,7 @@ public class TenantInitialAdminProvisioner {
             throw new TenantProvisioningException("Failed to create the initial tenant administrator: " + exception.getMessage(), exception);
         }
 
-        try {
-            emailService.sendNewUserCredentials(email, name, username, temporaryPassword,
-                    frontendUrl.replaceAll("/+$", "") + "/auth/login");
-        } catch (Exception exception) {
-            log.warn("Tenant administrator was created but the invitation email could not be sent: {}", exception.getMessage());
-        }
+        return new InitialAdminInvitation(name, email, username, temporaryPassword);
     }
 
     private long roleId(Connection connection) throws Exception {
@@ -90,4 +85,29 @@ public class TenantInitialAdminProvisioner {
         for (int index = 0; index < 14; index++) result.append(PASSWORD_CHARS[RANDOM.nextInt(PASSWORD_CHARS.length)]);
         return result.toString();
     }
+
+    public InitialAdminInvitation resetAdminPassword(String jdbcUrl, String databaseUsername, String databasePassword, String email) {
+        String password = temporaryPassword();
+        try (HikariDataSource ds = new HikariDataSource()) {
+            ds.setJdbcUrl(jdbcUrl); ds.setUsername(databaseUsername); ds.setPassword(databasePassword); ds.setMaximumPoolSize(1);
+            try (Connection connection = ds.getConnection(); PreparedStatement statement = connection.prepareStatement("UPDATE users SET password = ?, active = TRUE, email_verified = TRUE, updated_at = NOW() WHERE lower(email) = lower(?) AND id IN (SELECT ur.user_id FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE r.role_name = 'ADMIN') RETURNING name, email, username")) {
+                statement.setString(1, passwordEncoder.encode(password)); statement.setString(2, email);
+                try (ResultSet result = statement.executeQuery()) {
+                    if (!result.next()) throw new TenantProvisioningException("Initial tenant administrator was not found");
+                    return new InitialAdminInvitation(result.getString("name"), result.getString("email"), result.getString("username"), password);
+                }
+            }
+        } catch (TenantProvisioningException ex) { throw ex; } catch (Exception ex) { throw new TenantProvisioningException("Failed to reset tenant administrator password: " + ex.getMessage(), ex); }
+    }
+
+    public InitialAdminInvitation administratorAccess(String jdbcUrl, String databaseUsername, String databasePassword) {
+        try (HikariDataSource ds = new HikariDataSource()) {
+            ds.setJdbcUrl(jdbcUrl); ds.setUsername(databaseUsername); ds.setPassword(databasePassword); ds.setMaximumPoolSize(1);
+            try (Connection connection = ds.getConnection(); PreparedStatement statement = connection.prepareStatement("SELECT u.name, u.email, u.username FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id WHERE r.role_name = 'ADMIN' ORDER BY u.id LIMIT 1"); ResultSet result = statement.executeQuery()) {
+                if (!result.next()) throw new TenantProvisioningException("Initial tenant administrator was not found");
+                return new InitialAdminInvitation(result.getString("name"), result.getString("email"), result.getString("username"), null);
+            }
+        } catch (TenantProvisioningException ex) { throw ex; } catch (Exception ex) { throw new TenantProvisioningException("Failed to load tenant administrator access details: " + ex.getMessage(), ex); }
+    }
+    public record InitialAdminInvitation(String name, String email, String username, String temporaryPassword) { }
 }

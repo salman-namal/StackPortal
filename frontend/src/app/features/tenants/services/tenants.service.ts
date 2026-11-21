@@ -5,6 +5,8 @@ import { appConfig } from '../../../core/config/app-config';
 import { ApiResponse, PageResponse } from '../../../core/models/api-response.models';
 import { TenantDto, TenantQuery } from '../models/tenant.models';
 export interface TenantDashboard { totalTenants: number; activeTenants: number; inactiveTenants: number; recentTenants: TenantDto[]; }
+export interface TenantAdministratorAccess { administratorName: string; administratorEmail: string; administratorUsername: string; }
+export interface AdminPasswordReset { administratorName: string; administratorEmail: string; administratorUsername: string; temporaryPassword: string; }
 
 export type { TenantDto, TenantQuery } from '../models/tenant.models';
 export type { ApiResponse, PageResponse } from '../../../core/models/api-response.models';
@@ -46,6 +48,14 @@ export class TenantsService {
 
   setStatus(id: number, status: 'ACTIVE' | 'INACTIVE') {
     return this.http.patch<ApiResponse<TenantDto>>(`${this.tenantsUrl}/${id}/status`, {}, { params: new HttpParams().set('status', status) });
+  }
+
+  administratorAccess(id: number) {
+    return this.http.get<ApiResponse<TenantAdministratorAccess>>(`${this.tenantsUrl}/${id}/administrator-access`);
+  }
+
+  resetAdministratorPassword(id: number) {
+    return this.http.post<ApiResponse<AdminPasswordReset>>(`${this.tenantsUrl}/${id}/admin-password/reset`, {});
   }
 }
 

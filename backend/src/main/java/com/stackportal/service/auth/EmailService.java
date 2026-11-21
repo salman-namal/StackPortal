@@ -58,5 +58,13 @@ public class EmailService {
                 + "Sign in at: " + loginUrl);
         mailSender.send(message);
     }
+
+    public void sendTenantAdminInvitation(String to, String name, String invitationUrl, String loginUrl) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to); message.setFrom(from); message.setSubject("Set up your StackPortal administrator account");
+        message.setText("Hello " + name + ",\n\nSet your administrator password using this one-time link:\n" + invitationUrl
+                + "\n\nAfter setup, sign in at:\n" + loginUrl + "\n\nThis invitation expires in 24 hours.");
+        mailSender.send(message);
+    }
 }
 

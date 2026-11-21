@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
@@ -51,6 +52,10 @@ public class JwtService {
         return Jwts.builder()
                 .setClaims(extraClaims == null ? Map.of() : extraClaims)
                 .setSubject(username)
+                // Refresh tokens are persisted under a unique constraint. Issued-at
+                // timestamps have second precision in JWTs, so they are not enough
+                // to distinguish two legitimate logins in the same second.
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)

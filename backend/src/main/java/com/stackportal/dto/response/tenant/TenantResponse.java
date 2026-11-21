@@ -16,6 +16,7 @@ public record TenantResponse(
         Long id,
         String name,
         String code,
+        String loginUrl,
         String logo,
         UUID logoId,
         String adminName,

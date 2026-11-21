@@ -26,6 +26,9 @@ public class Tenant {
     @Column(nullable = false, unique = true, length = 50)
     private String code;
 
+    @Column(name = "login_url", nullable = false, length = 500)
+    private String loginUrl;
+
     @Column(columnDefinition = "TEXT")
     private String logo;
 

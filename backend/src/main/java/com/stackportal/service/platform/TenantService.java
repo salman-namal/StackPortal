@@ -7,6 +7,9 @@ import com.stackportal.tenant.provisioning.TenantInitialAdminProvisioner;
 import com.stackportal.tenant.migration.TenantMigrationRunner;
 import com.stackportal.dto.request.tenant.TenantRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
+import com.stackportal.dto.response.tenant.TenantCreationResponse;
+import com.stackportal.dto.response.tenant.AdminPasswordResetResponse;
+import com.stackportal.dto.response.tenant.TenantAdministratorAccessResponse;
 import com.stackportal.entity.master.Tenant;
 import com.stackportal.entity.master.TenantStatus;
 import com.stackportal.repository.master.TenantRepository;
@@ -38,6 +41,7 @@ public class TenantService {
     private final TenantDatabaseProvisioner   tenantDatabaseProvisioner;
     private final TenantMigrationRunner       tenantMigrationRunner;
     private final TenantInitialAdminProvisioner tenantInitialAdminProvisioner;
+    private final TenantLoginUrlService tenantLoginUrlService;
     private final MediaService mediaService;
     private final com.stackportal.repository.master.TenantAuditEventRepository tenantAuditEventRepository;
 
@@ -54,7 +58,7 @@ public class TenantService {
     // CRUD
     // -----------------------------------------------------------------------
 
-    public TenantResponse create(TenantRequest request) {
+    public TenantCreationResponse create(TenantRequest request) {
         validateProfile(request);
         if (request.adminName() == null || request.adminName().isBlank()
                 || request.adminEmail() == null || request.adminEmail().isBlank()) {
@@ -81,13 +85,14 @@ public class TenantService {
         tenantMigrationRunner.migrateNewTenant(
                 provision.jdbcUrl(), masterUsername, dbPassword);
 
-        tenantInitialAdminProvisioner.provision(provision.jdbcUrl(), masterUsername, dbPassword,
+        TenantInitialAdminProvisioner.InitialAdminInvitation initialAdmin = tenantInitialAdminProvisioner.provision(provision.jdbcUrl(), masterUsername, dbPassword,
                 request.adminName().trim(), request.adminEmail().trim().toLowerCase());
 
         // --- Persist the tenant record ---
         Tenant tenant = Tenant.builder()
                 .name(request.name())
                 .code(code)
+                .loginUrl(tenantLoginUrlService.loginUrl(code))
                 .logoId(validLogoId(request.logoId()))
                 .adminName(trimToNull(request.adminName()))
                 .email(normalizeEmail(request.adminEmail()))
@@ -128,7 +133,7 @@ public class TenantService {
         }
 
         audit(saved.getId(), "CREATED", "Tenant and initial ADMIN provisioned");
-        return toResponse(saved);
+        return new TenantCreationResponse(toResponse(saved), initialAdmin.email(), initialAdmin.temporaryPassword());
     }
 
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
@@ -245,6 +250,19 @@ public class TenantService {
         return toResponse(saved);
     }
 
+    public AdminPasswordResetResponse resetAdministratorPassword(Long id) {
+        Tenant tenant = findOrThrow(id);
+        var reset = tenantInitialAdminProvisioner.resetAdminPassword(tenant.getDatabaseUrl(), tenant.getDatabaseUsername(), tenant.getDatabasePassword(), tenant.getEmail());
+        audit(id, "ADMIN_PASSWORD_RESET", "Initial administrator password reset by SUPER_ADMIN");
+        return new AdminPasswordResetResponse(reset.name(), reset.email(), reset.username(), reset.temporaryPassword());
+    }
+
+    public TenantAdministratorAccessResponse administratorAccess(Long id) {
+        Tenant tenant = findOrThrow(id);
+        var admin = tenantInitialAdminProvisioner.administratorAccess(tenant.getDatabaseUrl(), tenant.getDatabaseUsername(), tenant.getDatabasePassword());
+        return new TenantAdministratorAccessResponse(admin.name(), admin.email(), admin.username());
+    }
+
     private void audit(Long tenantId, String action, String detail) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String actor = authentication == null ? null : authentication.getName();
@@ -281,6 +299,7 @@ public class TenantService {
                 tenant.getId(),
                 tenant.getName(),
                 tenant.getCode(),
+                tenant.getLoginUrl(),
                 tenant.getLogo(),
                 tenant.getLogoId(),
                 tenant.getAdminName(),
@@ -304,7 +323,7 @@ public class TenantService {
         TenantResponse response = toResponse(tenant);
         String logo = response.logo();
         if (logo != null && logo.startsWith("data:") && logo.length() > 100_000) {
-            return new TenantResponse(response.id(), response.name(), response.code(), null, response.logoId(),
+            return new TenantResponse(response.id(), response.name(), response.code(), response.loginUrl(), null, response.logoId(),
                     response.adminName(), response.adminEmail(), response.email(), response.website(), response.phone(),
                     response.address(), response.city(), response.country(), response.notes(), response.databaseName(),
                     response.status(), response.createdAt(), response.updatedAt());

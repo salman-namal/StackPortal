@@ -4,6 +4,9 @@ import com.stackportal.common.response.ApiResponse;
 import com.stackportal.dto.request.tenant.TenantRequest;
 import com.stackportal.dto.request.tenant.TenantDeletionRequest;
 import com.stackportal.dto.response.tenant.TenantResponse;
+import com.stackportal.dto.response.tenant.TenantCreationResponse;
+import com.stackportal.dto.response.tenant.AdminPasswordResetResponse;
+import com.stackportal.dto.response.tenant.TenantAdministratorAccessResponse;
 import com.stackportal.dto.response.tenant.TenantDashboardResponse;
 import com.stackportal.service.platform.TenantService;
 import com.stackportal.service.platform.TenantLogoStorageService;
@@ -47,7 +50,7 @@ public class TenantController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<TenantResponse>> create(
+    public ResponseEntity<ApiResponse<TenantCreationResponse>> create(
             @Valid @RequestBody TenantRequest request) {
 
         return ResponseEntity
@@ -77,6 +80,16 @@ public class TenantController {
     public ResponseEntity<ApiResponse<TenantResponse>> setStatus(@PathVariable Long id,
                                                                   @RequestParam TenantStatus status) {
         return ResponseEntity.ok(ApiResponse.ok("Tenant status updated", tenantService.setStatus(id, status)));
+    }
+
+    @PostMapping("/{id}/admin-password/reset")
+    public ResponseEntity<ApiResponse<AdminPasswordResetResponse>> resetAdministratorPassword(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Administrator password reset", tenantService.resetAdministratorPassword(id)));
+    }
+
+    @GetMapping("/{id}/administrator-access")
+    public ResponseEntity<ApiResponse<TenantAdministratorAccessResponse>> administratorAccess(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Tenant administrator access retrieved", tenantService.administratorAccess(id)));
     }
 
     @GetMapping("/{id}")
